@@ -7,7 +7,7 @@ type Image = {
 
 type Opts = {
   height: number;
-  // other options here?
+  threshold?: number; // 0..255, lower = fewer similarity edges
 }
 
 function scaleImage(src: Image, opts: Opts): Image;
@@ -87,16 +87,17 @@ function fetchPixelRGBA8(src, x, y) {
   return [d[idx], d[idx + 1], d[idx + 2], d[idx + 3]];
 }
 
-function isSimilar(a, b) {
+function isSimilar(a, b, threshold) {
   const yA = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
   const uA = 0.493 * (a[2] - yA);
   const vA = 0.877 * (a[0] - yA);
   const yB = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
   const uB = 0.493 * (b[2] - yB);
   const vB = 0.877 * (b[0] - yB);
-  if (Math.abs(yA - yB) <= 48.0 / 255.0) {
-    if (Math.abs(uA - uB) <= 7.0 / 255.0) {
-      if (Math.abs(vA - vB) <= 6.0 / 255.0) {
+  const t = Math.max(0, Math.min(255, threshold | 0)) / 255.0;
+  if (Math.abs(yA - yB) <= (48.0 / 255.0) * t) {
+    if (Math.abs(uA - uB) <= (7.0 / 255.0) * t) {
+      if (Math.abs(vA - vB) <= (6.0 / 255.0) * t) {
         return true;
       }
     }
@@ -120,7 +121,7 @@ function isContour(src, pL, pR) {
   return dist > 100.0 / 255.0;
 }
 
-function buildSimilarityGraph(src) {
+function buildSimilarityGraph(src, similarityThreshold) {
   const w = src.width;
   const h = src.height;
   const sgW = 2 * w + 1;
@@ -152,19 +153,19 @@ function buildSimilarityGraph(src) {
         let diagonal = 0;
         let pA = getPixelCoords(x - 1, y + 1);
         let pB = getPixelCoords(x + 1, y - 1);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]))) {
+        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
           diagonal = EDGE_DIAGONAL_ULLR;
         }
         pA = getPixelCoords(x - 1, y - 1);
         pB = getPixelCoords(x + 1, y + 1);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]))) {
+        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
           diagonal = diagonal | EDGE_DIAGONAL_LLUR;
         }
         setRG(x, y, diagonal, 0);
       } else if (evalX === 0 && evalY === 1) {
         const pA = getPixelCoords(x - 1, y);
         const pB = getPixelCoords(x + 1, y);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]))) {
+        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
           setRG(x, y, EDGE_HORVERT, 0);
         } else {
           setRG(x, y, 0, 0);
@@ -172,7 +173,7 @@ function buildSimilarityGraph(src) {
       } else if (evalX === 1 && evalY === 0) {
         const pA = getPixelCoords(x, y - 1);
         const pB = getPixelCoords(x, y + 1);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]))) {
+        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
           setRG(x, y, EDGE_HORVERT, 0);
         } else {
           setRG(x, y, 0, 0);
@@ -1615,7 +1616,9 @@ function scaleImage(src, opts) {
   const outH = opts.height | 0;
   const outW = Math.max(1, Math.round((inW / inH) * outH));
 
-  const sim0 = buildSimilarityGraph(src);
+  const similarityThreshold = (typeof opts.threshold === "number") ? opts.threshold : 255;
+
+  const sim0 = buildSimilarityGraph(src, similarityThreshold);
   const sim1 = valenceUpdate(sim0);
   const sim2 = eliminateCrossings(sim1);
   const sim3 = valenceUpdate(sim2);
