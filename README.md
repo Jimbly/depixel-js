@@ -3,6 +3,7 @@ Kopf-Lischinski "Depixelizing Pixel Art" Node.js version
 
 Based on the following paper:
 * [Depixelizing Pixel Art](https://johanneskopf.de/publications/pixelart/)
+
 And the [source code](https://github.com/falichs/Depixelizing-Pixel-Art-on-GPUs) included with this paper:
 * [Depixelizing Pixel Art on GPUs](https://www.cg.tuwien.ac.at/research/publications/2014/KREUZER-2014-DPA/)
 
