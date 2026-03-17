@@ -57,8 +57,12 @@ const GLIMIT = 10.0;
 const TINY = 0.000000001;
 
 function clampInt(v, lo, hi) {
-  if (v < lo) return lo;
-  if (v > hi) return hi;
+  if (v < lo) {
+    return lo;
+  }
+  if (v > hi) {
+    return hi;
+  }
   return v;
 }
 
@@ -148,7 +152,7 @@ function buildSimilarityGraph(src, similarityThreshold) {
         pA = getPixelCoords(x - 1, y - 1);
         pB = getPixelCoords(x + 1, y + 1);
         if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
-          diagonal = diagonal | EDGE_DIAGONAL_LLUR;
+          diagonal |= EDGE_DIAGONAL_LLUR;
         }
         setRG(x, y, diagonal, 0);
       } else if (evalX === 0 && evalY === 1) {
@@ -185,12 +189,10 @@ function valenceUpdate(sim) {
   const gOut = new Int32Array(sgW * sgH);
 
   function getR(x, y) {
-    if (x < 0 || y < 0 || x >= sgW || y >= sgH) return 0;
+    if (x < 0 || y < 0 || x >= sgW || y >= sgH) {
+      return 0;
+    }
     return rIn[y * sgW + x] | 0;
-  }
-  function getG(x, y) {
-    if (x < 0 || y < 0 || x >= sgW || y >= sgH) return 0;
-    return gIn[y * sgW + x] | 0;
   }
 
   for (let y = 0; y < sgH; y++) {
@@ -262,11 +264,15 @@ function eliminateCrossings(sim) {
   const gOut = new Int32Array(sgW * sgH);
 
   function getR(x, y) {
-    if (x < 0 || y < 0 || x >= sgW || y >= sgH) return 0;
+    if (x < 0 || y < 0 || x >= sgW || y >= sgH) {
+      return 0;
+    }
     return rIn[y * sgW + x] | 0;
   }
   function getG(x, y) {
-    if (x < 0 || y < 0 || x >= sgW || y >= sgH) return 0;
+    if (x < 0 || y < 0 || x >= sgW || y >= sgH) {
+      return 0;
+    }
     return gIn[y * sgW + x] | 0;
   }
   function setRG(x, y, rv, gv) {
@@ -281,14 +287,15 @@ function eliminateCrossings(sim) {
 
       let voteA = 0;
       let voteB = 0;
-      let debugA = 0;
-      let debugB = 0;
       let componentSizeA = 2;
       let componentSizeB = 2;
 
       function countForComponent(c) {
-        if (c === 1) componentSizeA++;
-        else if (c === 2) componentSizeB++;
+        if (c === 1) {
+          componentSizeA++;
+        } else if (c === 2) {
+          componentSizeB++;
+        }
       }
 
       function voteIslands() {
@@ -306,7 +313,7 @@ function eliminateCrossings(sim) {
         }
         if (getR(x + 1, y + 1) === 1) {
           voteB += 5;
-          return;
+          return; // eslint-disable-line no-useless-return
         }
       }
 
@@ -322,7 +329,14 @@ function eliminateCrossings(sim) {
           0,0,0,0,0,0,0,0
         ]);
 
-        let nNW=0, nW=0, nSW=0, nS=0, nSE=0, nE=0, nNE=0, nN=0;
+        let nNW = 0;
+        let nW = 0;
+        let nSW = 0;
+        let nS = 0;
+        let nSE = 0;
+        let nE = 0;
+        let nNE = 0;
+        let nN = 0;
         for (let level = 0; level < 2; level++) {
           let xOFFSET = -(1 + 2 * level);
           let yOFFSET = 1 + (2 * level);
@@ -551,8 +565,6 @@ function eliminateCrossings(sim) {
           }
         }
 
-        debugA = componentSizeA;
-        debugB = componentSizeB;
         if (componentSizeA < componentSizeB) {
           voteA += (componentSizeB - componentSizeA);
         } else if (componentSizeA > componentSizeB) {
@@ -600,9 +612,14 @@ function eliminateCrossings(sim) {
         lengthA += traceNodes(A2, 1);
         lengthB += traceNodes(B1, 64);
         lengthB += traceNodes(B2, 4);
-        if (lengthA === lengthB) return;
-        if (lengthA > lengthB) voteA += (lengthA - lengthB);
-        else voteB += (lengthB - lengthA);
+        if (lengthA === lengthB) {
+          return;
+        }
+        if (lengthA > lengthB) {
+          voteA += (lengthA - lengthB);
+        } else {
+          voteB += (lengthB - lengthA);
+        }
       }
 
       function isFullyConnectedCD() {
@@ -613,7 +630,9 @@ function eliminateCrossings(sim) {
         if (getR(x, y + 1) === EDGE_HORVERT) {
           if (getR(x + 1, y) === EDGE_HORVERT) {
             if (getR(x, y - 1) === EDGE_HORVERT) {
-              if (getR(x - 1, y) === EDGE_HORVERT) return true;
+              if (getR(x - 1, y) === EDGE_HORVERT) {
+                return true;
+              }
             }
           }
         }
@@ -660,17 +679,25 @@ function computeCellGraph(src, sim) {
   const flags = new Int32Array(count);
 
   function getSimR(x, y) {
-    if (x < 0 || y < 0 || x >= sim.w || y >= sim.h) return 0;
+    if (x < 0 || y < 0 || x >= sim.w || y >= sim.h) {
+      return 0;
+    }
     return sim.r[y * sim.w + x] | 0;
   }
 
   function getNeighborIndex(cx, cy, dir, targetSector) {
     let index = -1;
-    if (dir === 'N') index = ((cy + 1) * dy + cx) * 2 + targetSector;
-    else if (dir === 'E') index = (cy * dy + cx + 1) * 2 + targetSector;
-    else if (dir === 'S') index = ((cy - 1) * dy + cx) * 2 + targetSector;
-    else if (dir === 'W') index = (cy * dy + cx - 1) * 2 + targetSector;
-    else if (dir === 'C') index = (cy * dy + cx) * 2 + targetSector;
+    if (dir === 'N') {
+      index = ((cy + 1) * dy + cx) * 2 + targetSector;
+    } else if (dir === 'E') {
+      index = (cy * dy + cx + 1) * 2 + targetSector;
+    } else if (dir === 'S') {
+      index = ((cy - 1) * dy + cx) * 2 + targetSector;
+    } else if (dir === 'W') {
+      index = (cy * dy + cx - 1) * 2 + targetSector;
+    } else if (dir === 'C') {
+      index = (cy * dy + cx) * 2 + targetSector;
+    }
     return index;
   }
 
@@ -681,11 +708,19 @@ function computeCellGraph(src, sim) {
   function checkForCorner(s1, s2) {
     const n1 = Math.hypot(s1[0], s1[1]);
     const n2 = Math.hypot(s2[0], s2[1]);
-    if (n1 === 0 || n2 === 0) return false;
+    if (n1 === 0 || n2 === 0) {
+      return false;
+    }
     const dp = (s1[0] / n1) * (s2[0] / n2) + (s1[1] / n1) * (s2[1] / n2);
-    if (dp > -0.7072 && dp < -0.7070) return true;
-    if (dp > -0.3163 && dp < -0.3161) return true;
-    if (dp > -0.0001 && dp < 0.0001) return true;
+    if (dp > -0.7072 && dp < -0.7070) {
+      return true;
+    }
+    if (dp > -0.3163 && dp < -0.3161) {
+      return true;
+    }
+    if (dp > -0.0001 && dp < 0.0001) {
+      return true;
+    }
     return false;
   }
 
@@ -710,11 +745,22 @@ function computeCellGraph(src, sim) {
       let v0_flags = 0;
       let v1_flags = 0;
 
-      let ignoreN = false, ignoreE = false, ignoreS = false, ignoreW = false;
-      if (cy > h - 3) ignoreN = true;
-      if (cx > w - 3) ignoreE = true;
-      if (cy < 1) ignoreS = true;
-      if (cx < 1) ignoreW = true;
+      let ignoreN = false;
+      let ignoreE = false;
+      let ignoreS = false;
+      let ignoreW = false;
+      if (cy > h - 3) {
+        ignoreN = true;
+      }
+      if (cx > w - 3) {
+        ignoreE = true;
+      }
+      if (cy < 1) {
+        ignoreS = true;
+      }
+      if (cx < 1) {
+        ignoreW = true;
+      }
 
       let neighborsFound = false;
       let nNeighborsFound = false;
@@ -806,8 +852,16 @@ function computeCellGraph(src, sim) {
           v0_pos = [centerPos[0] - 0.25, centerPos[1] - 0.25];
           let sIndex = sNeighborIndex;
           let wIndex = wNeighborIndex;
-          if (sNeighborsFound) v0_flags = HAS_SOUTHERN_NEIGHBOR | HAS_SOUTHERN_SPLINE; else twoNeighbors = false;
-          if (wNeighborsFound) v0_flags |= HAS_WESTERN_NEIGHBOR | HAS_WESTERN_SPLINE; else twoNeighbors = false;
+          if (sNeighborsFound) {
+            v0_flags = HAS_SOUTHERN_NEIGHBOR | HAS_SOUTHERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
+          if (wNeighborsFound) {
+            v0_flags |= HAS_WESTERN_NEIGHBOR | HAS_WESTERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
           if (twoNeighbors) {
             if (checkForCorner([sVector[0] + 0.25, sVector[1] + 0.25], [wVector[0] + 0.25, wVector[1] + 0.25])) {
               v0_flags |= DONT_OPTIMIZE_S | DONT_OPTIMIZE_W;
@@ -819,8 +873,16 @@ function computeCellGraph(src, sim) {
           v1_pos = [centerPos[0] + 0.25, centerPos[1] + 0.25];
           let nIndex = nNeighborIndex;
           let eIndex = eNeighborIndex;
-          if (nNeighborsFound) v1_flags = HAS_NORTHERN_NEIGHBOR | HAS_NORTHERN_SPLINE; else twoNeighbors = false;
-          if (eNeighborsFound) v1_flags |= HAS_EASTERN_NEIGHBOR | HAS_EASTERN_SPLINE; else twoNeighbors = false;
+          if (nNeighborsFound) {
+            v1_flags = HAS_NORTHERN_NEIGHBOR | HAS_NORTHERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
+          if (eNeighborsFound) {
+            v1_flags |= HAS_EASTERN_NEIGHBOR | HAS_EASTERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
           if (twoNeighbors) {
             if (checkForCorner([nVector[0] - 0.25, nVector[1] - 0.25], [eVector[0] - 0.25, eVector[1] - 0.25])) {
               v1_flags |= DONT_OPTIMIZE_N | DONT_OPTIMIZE_E;
@@ -832,8 +894,16 @@ function computeCellGraph(src, sim) {
           v0_pos = [centerPos[0] - 0.25, centerPos[1] + 0.25];
           let nIndex = nNeighborIndex;
           let wIndex = wNeighborIndex;
-          if (nNeighborsFound) v0_flags = HAS_NORTHERN_NEIGHBOR | HAS_NORTHERN_SPLINE; else twoNeighbors = false;
-          if (wNeighborsFound) v0_flags |= HAS_WESTERN_NEIGHBOR | HAS_WESTERN_SPLINE; else twoNeighbors = false;
+          if (nNeighborsFound) {
+            v0_flags = HAS_NORTHERN_NEIGHBOR | HAS_NORTHERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
+          if (wNeighborsFound) {
+            v0_flags |= HAS_WESTERN_NEIGHBOR | HAS_WESTERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
           if (twoNeighbors) {
             if (checkForCorner([nVector[0] + 0.25, nVector[1] - 0.25], [wVector[0] + 0.25, wVector[1] - 0.25])) {
               v0_flags |= DONT_OPTIMIZE_N | DONT_OPTIMIZE_W;
@@ -845,8 +915,16 @@ function computeCellGraph(src, sim) {
           v1_pos = [centerPos[0] + 0.25, centerPos[1] - 0.25];
           let sIndex = sNeighborIndex;
           let eIndex = eNeighborIndex;
-          if (sNeighborsFound) v1_flags = HAS_SOUTHERN_NEIGHBOR | HAS_SOUTHERN_SPLINE; else twoNeighbors = false;
-          if (eNeighborsFound) v1_flags |= HAS_EASTERN_NEIGHBOR | HAS_EASTERN_SPLINE; else twoNeighbors = false;
+          if (sNeighborsFound) {
+            v1_flags = HAS_SOUTHERN_NEIGHBOR | HAS_SOUTHERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
+          if (eNeighborsFound) {
+            v1_flags |= HAS_EASTERN_NEIGHBOR | HAS_EASTERN_SPLINE;
+          } else {
+            twoNeighbors = false;
+          }
           if (twoNeighbors) {
             if (checkForCorner([sVector[0] - 0.25, sVector[1] + 0.25], [eVector[0] - 0.25, eVector[1] + 0.25])) {
               v1_flags |= DONT_OPTIMIZE_S | DONT_OPTIMIZE_E;
@@ -859,16 +937,32 @@ function computeCellGraph(src, sim) {
           let eIndex = eNeighborIndex;
           let sIndex = sNeighborIndex;
           let wIndex = wNeighborIndex;
-          if (nNeighborsFound) v0_flags |= HAS_NORTHERN_NEIGHBOR;
-          if (eNeighborsFound) v0_flags |= HAS_EASTERN_NEIGHBOR;
-          if (sNeighborsFound) v0_flags |= HAS_SOUTHERN_NEIGHBOR;
-          if (wNeighborsFound) v0_flags |= HAS_WESTERN_NEIGHBOR;
+          if (nNeighborsFound) {
+            v0_flags |= HAS_NORTHERN_NEIGHBOR;
+          }
+          if (eNeighborsFound) {
+            v0_flags |= HAS_EASTERN_NEIGHBOR;
+          }
+          if (sNeighborsFound) {
+            v0_flags |= HAS_SOUTHERN_NEIGHBOR;
+          }
+          if (wNeighborsFound) {
+            v0_flags |= HAS_WESTERN_NEIGHBOR;
+          }
 
           if (neighborCount === 2) {
-            if (nNeighborsFound) v0_flags |= HAS_NORTHERN_SPLINE;
-            if (eNeighborsFound) v0_flags |= HAS_EASTERN_SPLINE;
-            if (sNeighborsFound) v0_flags |= HAS_SOUTHERN_SPLINE;
-            if (wNeighborsFound) v0_flags |= HAS_WESTERN_SPLINE;
+            if (nNeighborsFound) {
+              v0_flags |= HAS_NORTHERN_SPLINE;
+            }
+            if (eNeighborsFound) {
+              v0_flags |= HAS_EASTERN_SPLINE;
+            }
+            if (sNeighborsFound) {
+              v0_flags |= HAS_SOUTHERN_SPLINE;
+            }
+            if (wNeighborsFound) {
+              v0_flags |= HAS_WESTERN_SPLINE;
+            }
           } else if (neighborCount === 3) {
             let contours = 0;
             let contourCount = 0;
@@ -943,15 +1037,6 @@ function optimizeCellGraph(cell, width, height) {
     return [optimized[idx * 2], optimized[idx * 2 + 1]];
   }
 
-  function getNeighborIndex(sourceIndex, dir) {
-    const base = sourceIndex * 4;
-    if (dir === 'N') return cell.neighbors[base];
-    if (dir === 'E') return cell.neighbors[base + 1];
-    if (dir === 'S') return cell.neighbors[base + 2];
-    if (dir === 'W') return cell.neighbors[base + 3];
-    return -1;
-  }
-
   function calcPositionalEnergy(pNew, pOld) {
     const dx = pNew[0] - pOld[0];
     const dy = pNew[1] - pOld[1];
@@ -993,8 +1078,12 @@ function optimizeCellGraph(cell, width, height) {
       if ((bx - u) * (u - cx) > 0.0) {
         pOpt = [pos[0] - gradient[0] * u, pos[1] - gradient[1] * u];
         fu = calcSegmentCurveEnergy(splineNeighbors[0], pOpt, splineNeighbors[1]) + calcPositionalEnergy(pOpt, pos);
-        if (fu < fc) return [bx, u, cx];
-        if (fu > fb) return [ax, bx, u];
+        if (fu < fc) {
+          return [bx, u, cx];
+        }
+        if (fu > fb) {
+          return [ax, bx, u];
+        }
         u = cx + GOLD * (cx - bx);
         pOpt = [pos[0] - gradient[0] * u, pos[1] - gradient[1] * u];
         fu = calcSegmentCurveEnergy(splineNeighbors[0], pOpt, splineNeighbors[1]) + calcPositionalEnergy(pOpt, pos);
@@ -1026,7 +1115,9 @@ function optimizeCellGraph(cell, width, height) {
   function searchOffset(pos, splineNeighbors) {
     let gradient = calcGradient(splineNeighbors[0], pos, splineNeighbors[1]);
     const glen = Math.hypot(gradient[0], gradient[1]);
-    if (glen <= 0.0) return [0, 0, 0];
+    if (glen <= 0.0) {
+      return [0, 0, 0];
+    }
     gradient = [gradient[0] / glen, gradient[1] / glen];
     const bracket = findBracket(pos, splineNeighbors, gradient);
     let x0 = bracket[0];
@@ -1082,7 +1173,9 @@ function optimizeCellGraph(cell, width, height) {
 
       if (hasN) {
         const neighborflags = cell.flags[neighbors[0]] | 0;
-        if (((flags & DONT_OPTIMIZE_N) === DONT_OPTIMIZE_N) || ((neighborflags & DONT_OPTIMIZE_S) === DONT_OPTIMIZE_S)) splineNoOpt = true;
+        if (((flags & DONT_OPTIMIZE_N) === DONT_OPTIMIZE_N) || ((neighborflags & DONT_OPTIMIZE_S) === DONT_OPTIMIZE_S)) {
+          splineNoOpt = true;
+        }
         if (!splineNoOpt) {
           if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_SOUTHERN_SPLINE) !== HAS_SOUTHERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[0] + 1);
@@ -1093,7 +1186,9 @@ function optimizeCellGraph(cell, width, height) {
       }
       if (hasE) {
         const neighborflags = cell.flags[neighbors[1]] | 0;
-        if (((flags & DONT_OPTIMIZE_E) === DONT_OPTIMIZE_E) || ((neighborflags & DONT_OPTIMIZE_W) === DONT_OPTIMIZE_W)) splineNoOpt = true;
+        if (((flags & DONT_OPTIMIZE_E) === DONT_OPTIMIZE_E) || ((neighborflags & DONT_OPTIMIZE_W) === DONT_OPTIMIZE_W)) {
+          splineNoOpt = true;
+        }
         if (!splineNoOpt) {
           if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_WESTERN_SPLINE) !== HAS_WESTERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[1] + 1);
@@ -1104,7 +1199,9 @@ function optimizeCellGraph(cell, width, height) {
       }
       if (hasS) {
         const neighborflags = cell.flags[neighbors[2]] | 0;
-        if (((flags & DONT_OPTIMIZE_S) === DONT_OPTIMIZE_S) || ((neighborflags & DONT_OPTIMIZE_N) === DONT_OPTIMIZE_N)) splineNoOpt = true;
+        if (((flags & DONT_OPTIMIZE_S) === DONT_OPTIMIZE_S) || ((neighborflags & DONT_OPTIMIZE_N) === DONT_OPTIMIZE_N)) {
+          splineNoOpt = true;
+        }
         if (!splineNoOpt) {
           if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_NORTHERN_SPLINE) !== HAS_NORTHERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[2] + 1);
@@ -1115,7 +1212,9 @@ function optimizeCellGraph(cell, width, height) {
       }
       if (hasW) {
         const neighborflags = cell.flags[neighbors[3]] | 0;
-        if (((flags & DONT_OPTIMIZE_W) === DONT_OPTIMIZE_W) || ((neighborflags & DONT_OPTIMIZE_E) === DONT_OPTIMIZE_E)) splineNoOpt = true;
+        if (((flags & DONT_OPTIMIZE_W) === DONT_OPTIMIZE_W) || ((neighborflags & DONT_OPTIMIZE_E) === DONT_OPTIMIZE_E)) {
+          splineNoOpt = true;
+        }
         if (!splineNoOpt) {
           if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_EASTERN_SPLINE) !== HAS_EASTERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[3] + 1);
@@ -1190,12 +1289,10 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
   const h = src.height;
   const out = new Uint8Array(outW * outH * 4);
 
-  function getR(x, y) {
-    if (x < 0 || y < 0 || x >= sim.w || y >= sim.h) return 0;
-    return sim.r[y * sim.w + x] | 0;
-  }
   function getG(x, y) {
-    if (x < 0 || y < 0 || x >= sim.w || y >= sim.h) return 0;
+    if (x < 0 || y < 0 || x >= sim.w || y >= sim.h) {
+      return 0;
+    }
     return sim.g[y * sim.w + x] | 0;
   }
 
@@ -1205,10 +1302,18 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
 
   function getNeighborIndex(sourceIndex, dir) {
     const base = sourceIndex * 4;
-    if (dir === NORTH) return cell.neighbors[base];
-    if (dir === EAST) return cell.neighbors[base + 1];
-    if (dir === SOUTH) return cell.neighbors[base + 2];
-    if (dir === WEST) return cell.neighbors[base + 3];
+    if (dir === NORTH) {
+      return cell.neighbors[base];
+    }
+    if (dir === EAST) {
+      return cell.neighbors[base + 1];
+    }
+    if (dir === SOUTH) {
+      return cell.neighbors[base + 2];
+    }
+    if (dir === WEST) {
+      return cell.neighbors[base + 3];
+    }
     return -1;
   }
 
@@ -1223,21 +1328,35 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
     const r = [a1[0] - a0[0], a1[1] - a0[1]];
     const s = [b1[0] - b0[0], b1[1] - b0[1]];
     const rXs = r[0] * s[1] - r[1] * s[0];
-    if (rXs === 0.0) return false;
+    if (rXs === 0.0) {
+      return false;
+    }
     const ba = [b0[0] - a0[0], b0[1] - a0[1]];
     const t = (ba[0] * s[1] - ba[1] * s[0]) / rXs;
-    if (t < 0.0 || t > 1.0) return false;
+    if (t < 0.0 || t > 1.0) {
+      return false;
+    }
     const u = (ba[0] * r[1] - ba[1] * r[0]) / rXs;
-    if (u < 0.0 || u > 1.0) return false;
+    if (u < 0.0 || u > 1.0) {
+      return false;
+    }
     return true;
   }
 
   function computeValence(flags) {
     let v = 0;
-    if ((flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) v++;
-    if ((flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) v++;
-    if ((flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) v++;
-    if ((flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) v++;
+    if ((flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
+      v++;
+    }
+    if ((flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+      v++;
+    }
+    if ((flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+      v++;
+    }
+    if ((flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+      v++;
+    }
     return v;
   }
 
@@ -1268,21 +1387,32 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       if ((node0neighborFlags & checkFwd[0]) === checkFwd[0]) {
         const neighborsNeighborIndex = getNeighborIndex(node0neighborIndex, dir);
         const neighborsNeighborflags = cell.flags[neighborsNeighborIndex] | 0;
-        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) cpArray[1] = neighborsNeighborIndex + 1;
-        else cpArray[1] = neighborsNeighborIndex;
+        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+          cpArray[1] = neighborsNeighborIndex + 1;
+        } else {
+          cpArray[1] = neighborsNeighborIndex;
+        }
       } else if ((node0neighborFlags & checkFwd[1]) === checkFwd[1]) {
         const neighborsNeighborIndex = getNeighborIndex(node0neighborIndex, chkdirs[0]);
         const neighborsNeighborflags = cell.flags[neighborsNeighborIndex] | 0;
-        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) cpArray[1] = neighborsNeighborIndex + 1;
-        else cpArray[1] = neighborsNeighborIndex;
+        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+          cpArray[1] = neighborsNeighborIndex + 1;
+        } else {
+          cpArray[1] = neighborsNeighborIndex;
+        }
       } else if ((node0neighborFlags & checkFwd[2]) === checkFwd[2]) {
         const neighborsNeighborIndex = getNeighborIndex(node0neighborIndex, chkdirs[1]);
         const neighborsNeighborflags = cell.flags[neighborsNeighborIndex] | 0;
-        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) cpArray[1] = neighborsNeighborIndex + 1;
-        else cpArray[1] = neighborsNeighborIndex;
+        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+          cpArray[1] = neighborsNeighborIndex + 1;
+        } else {
+          cpArray[1] = neighborsNeighborIndex;
+        }
       }
     } else {
-      if ((node0neighborFlags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) cpArray[0]++;
+      if ((node0neighborFlags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+        cpArray[0]++;
+      }
     }
     return cpArray;
   }
@@ -1307,10 +1437,18 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         let pointA = calcSplinePoint(p0, p1, p2, 0.0);
         for (let t = STEP; t < (1.0 + STEP); t += STEP) {
           const pointB = calcSplinePoint(p0, p1, p2, t);
-          if (intersects(cellSpaceCoords, ULCoords, pointA, pointB)) influencingPixels[0] = false;
-          if (intersects(cellSpaceCoords, URCoords, pointA, pointB)) influencingPixels[1] = false;
-          if (intersects(cellSpaceCoords, LLCoords, pointA, pointB)) influencingPixels[2] = false;
-          if (intersects(cellSpaceCoords, LRCoords, pointA, pointB)) influencingPixels[3] = false;
+          if (intersects(cellSpaceCoords, ULCoords, pointA, pointB)) {
+            influencingPixels[0] = false;
+          }
+          if (intersects(cellSpaceCoords, URCoords, pointA, pointB)) {
+            influencingPixels[1] = false;
+          }
+          if (intersects(cellSpaceCoords, LLCoords, pointA, pointB)) {
+            influencingPixels[2] = false;
+          }
+          if (intersects(cellSpaceCoords, LRCoords, pointA, pointB)) {
+            influencingPixels[3] = false;
+          }
           pointA = pointB;
         }
       }
@@ -1326,10 +1464,15 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         let node0pos = getPos(fragmentBaseKnotIndex);
         if (node0valence === 1) {
           let cpArray = [-1, -1];
-          if ((node0flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) cpArray = getCPs(node0neighbors[0], NORTH);
-          else if ((node0flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) cpArray = getCPs(node0neighbors[1], EAST);
-          else if ((node0flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) cpArray = getCPs(node0neighbors[2], SOUTH);
-          else if ((node0flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) cpArray = getCPs(node0neighbors[3], WEST);
+          if ((node0flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
+            cpArray = getCPs(node0neighbors[0], NORTH);
+          } else if ((node0flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+            cpArray = getCPs(node0neighbors[1], EAST);
+          } else if ((node0flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+            cpArray = getCPs(node0neighbors[2], SOUTH);
+          } else if ((node0flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+            cpArray = getCPs(node0neighbors[3], WEST);
+          }
           const p1pos = getPos(cpArray[0]);
           findSegmentIntersections(node0pos, node0pos, p1pos);
           if (cpArray[1] > -1) {
@@ -1477,10 +1620,15 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
           const node1pos = getPos(fragmentBaseKnotIndex + 1);
           if (node1valence === 1) {
             let cpArray = [-1, -1];
-            if ((node1flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) cpArray = getCPs(node1neighbors[0], NORTH);
-            else if ((node1flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) cpArray = getCPs(node1neighbors[1], EAST);
-            else if ((node1flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) cpArray = getCPs(node1neighbors[2], SOUTH);
-            else if ((node1flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) cpArray = getCPs(node1neighbors[3], WEST);
+            if ((node1flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
+              cpArray = getCPs(node1neighbors[0], NORTH);
+            } else if ((node1flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+              cpArray = getCPs(node1neighbors[1], EAST);
+            } else if ((node1flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+              cpArray = getCPs(node1neighbors[2], SOUTH);
+            } else if ((node1flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+              cpArray = getCPs(node1neighbors[3], WEST);
+            }
             const p1pos = getPos(cpArray[0]);
             findSegmentIntersections(node1pos, node1pos, p1pos);
             if (cpArray[1] > -1) {
@@ -1543,36 +1691,72 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       if (influencingPixels[0]) {
         addWeightedColor(ULCoords[0], ULCoords[1]);
         const edges = getG(2 * ULCoords[0] + 1, 2 * ULCoords[1] + 1);
-        if ((edges & SOUTHWEST) === SOUTHWEST) addWeightedColor(ULCoords[0] - 1, ULCoords[1] - 1);
-        if ((edges & WEST) === WEST) addWeightedColor(ULCoords[0] - 1, ULCoords[1]);
-        if ((edges & NORTHWEST) === NORTHWEST) addWeightedColor(ULCoords[0] - 1, ULCoords[1] + 1);
-        if ((edges & NORTH) === NORTH) addWeightedColor(ULCoords[0], ULCoords[1] + 1);
-        if ((edges & NORTHEAST) === NORTHEAST) addWeightedColor(ULCoords[0] + 1, ULCoords[1] + 1);
+        if ((edges & SOUTHWEST) === SOUTHWEST) {
+          addWeightedColor(ULCoords[0] - 1, ULCoords[1] - 1);
+        }
+        if ((edges & WEST) === WEST) {
+          addWeightedColor(ULCoords[0] - 1, ULCoords[1]);
+        }
+        if ((edges & NORTHWEST) === NORTHWEST) {
+          addWeightedColor(ULCoords[0] - 1, ULCoords[1] + 1);
+        }
+        if ((edges & NORTH) === NORTH) {
+          addWeightedColor(ULCoords[0], ULCoords[1] + 1);
+        }
+        if ((edges & NORTHEAST) === NORTHEAST) {
+          addWeightedColor(ULCoords[0] + 1, ULCoords[1] + 1);
+        }
       }
       if (influencingPixels[1]) {
         addWeightedColor(URCoords[0], URCoords[1]);
         const edges = getG(2 * URCoords[0] + 1, 2 * URCoords[1] + 1);
-        if ((edges & NORTH) === NORTH) addWeightedColor(URCoords[0], URCoords[1] + 1);
-        if ((edges & NORTHEAST) === NORTHEAST) addWeightedColor(URCoords[0] + 1, URCoords[1] + 1);
-        if ((edges & EAST) === EAST) addWeightedColor(URCoords[0] + 1, URCoords[1]);
-        if ((edges & SOUTHEAST) === SOUTHEAST) addWeightedColor(URCoords[0] + 1, URCoords[1] - 1);
+        if ((edges & NORTH) === NORTH) {
+          addWeightedColor(URCoords[0], URCoords[1] + 1);
+        }
+        if ((edges & NORTHEAST) === NORTHEAST) {
+          addWeightedColor(URCoords[0] + 1, URCoords[1] + 1);
+        }
+        if ((edges & EAST) === EAST) {
+          addWeightedColor(URCoords[0] + 1, URCoords[1]);
+        }
+        if ((edges & SOUTHEAST) === SOUTHEAST) {
+          addWeightedColor(URCoords[0] + 1, URCoords[1] - 1);
+        }
       }
       if (influencingPixels[2]) {
         addWeightedColor(LLCoords[0], LLCoords[1]);
         const edges = getG(2 * LLCoords[0] + 1, 2 * LLCoords[1] + 1);
-        if ((edges & WEST) === WEST) addWeightedColor(LLCoords[0] - 1, LLCoords[1]);
-        if ((edges & SOUTHWEST) === SOUTHWEST) addWeightedColor(LLCoords[0] - 1, LLCoords[1] - 1);
-        if ((edges & SOUTH) === SOUTH) addWeightedColor(LLCoords[0], LLCoords[1] - 1);
-        if ((edges & SOUTHEAST) === SOUTHEAST) addWeightedColor(LLCoords[0] + 1, LLCoords[1] - 1);
+        if ((edges & WEST) === WEST) {
+          addWeightedColor(LLCoords[0] - 1, LLCoords[1]);
+        }
+        if ((edges & SOUTHWEST) === SOUTHWEST) {
+          addWeightedColor(LLCoords[0] - 1, LLCoords[1] - 1);
+        }
+        if ((edges & SOUTH) === SOUTH) {
+          addWeightedColor(LLCoords[0], LLCoords[1] - 1);
+        }
+        if ((edges & SOUTHEAST) === SOUTHEAST) {
+          addWeightedColor(LLCoords[0] + 1, LLCoords[1] - 1);
+        }
       }
       if (influencingPixels[3]) {
         addWeightedColor(LRCoords[0], LRCoords[1]);
         const edges = getG(2 * LRCoords[0] + 1, 2 * LRCoords[1] + 1);
-        if ((edges & NORTHEAST) === NORTHEAST) addWeightedColor(LRCoords[0] + 1, LRCoords[1] + 1);
-        if ((edges & EAST) === EAST) addWeightedColor(LRCoords[0] + 1, LRCoords[1]);
-        if ((edges & SOUTHWEST) === SOUTHWEST) addWeightedColor(LRCoords[0] - 1, LRCoords[1] - 1);
-        if ((edges & SOUTH) === SOUTH) addWeightedColor(LRCoords[0], LRCoords[1] - 1);
-        if ((edges & SOUTHEAST) === SOUTHEAST) addWeightedColor(LRCoords[0] + 1, LRCoords[1] - 1);
+        if ((edges & NORTHEAST) === NORTHEAST) {
+          addWeightedColor(LRCoords[0] + 1, LRCoords[1] + 1);
+        }
+        if ((edges & EAST) === EAST) {
+          addWeightedColor(LRCoords[0] + 1, LRCoords[1]);
+        }
+        if ((edges & SOUTHWEST) === SOUTHWEST) {
+          addWeightedColor(LRCoords[0] - 1, LRCoords[1] - 1);
+        }
+        if ((edges & SOUTH) === SOUTH) {
+          addWeightedColor(LRCoords[0], LRCoords[1] - 1);
+        }
+        if ((edges & SOUTHEAST) === SOUTHEAST) {
+          addWeightedColor(LRCoords[0] + 1, LRCoords[1] - 1);
+        }
       }
 
       const outIdx = (oy * outW + ox) * 4;
@@ -1658,7 +1842,9 @@ function scaleImage(src, opts) {
 
     for (let y = 0; y < outH; y++) {
       const srcY = y + padOut;
-      if (srcY < 0 || srcY >= padded.height) continue;
+      if (srcY < 0 || srcY >= padded.height) {
+        continue;
+      }
       const srcRow = (srcY * padded.width + padOut) * 4;
       const dstRow = y * outW * 4;
       const len = Math.min(outW, Math.max(0, padded.width - padOut)) * 4;
