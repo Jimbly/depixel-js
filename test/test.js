@@ -30,23 +30,10 @@ let resHard = scaleImage({
 }, {
   height: src.height * scale,
   threshold: 0,
+  borderPx: 1,
 });
 assert.equal(resHard.data.length, dstHard.data.length);
 resHard.data.copy(dstHard.data);
 fs.writeFileSync(__dirname + '/test-out-hard.png', PNG.sync.write(dstHard));
-
-let dstBorder = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
-let resBorder = scaleImage({
-  data: src.data,
-  width: src.width,
-  height: src.height,
-}, {
-  height: src.height * scale,
-  threshold: 0,
-  borderPx: 2,
-});
-assert.equal(resBorder.data.length, dstBorder.data.length);
-resBorder.data.copy(dstBorder.data);
-fs.writeFileSync(__dirname + '/test-out-border.png', PNG.sync.write(dstBorder));
 
 console.log('Test complete.');

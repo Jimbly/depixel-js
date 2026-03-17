@@ -14,8 +14,6 @@ type Opts = {
 function scaleImage(src: Image, opts: Opts): Image;
 */
 
-'use strict';
-
 const EDGE_HORVERT = 16;
 const EDGE_DIAGONAL_ULLR = 32;
 const EDGE_DIAGONAL_LLUR = 64;
@@ -76,16 +74,6 @@ function fetchPixelRGBA(src, x, y) {
   const idx = pixelIndex(cx, cy, w);
   const d = src.data;
   return [d[idx] / 255, d[idx + 1] / 255, d[idx + 2] / 255, d[idx + 3] / 255];
-}
-
-function fetchPixelRGBA8(src, x, y) {
-  const w = src.width;
-  const h = src.height;
-  const cx = clampInt(x, 0, w - 1);
-  const cy = clampInt(y, 0, h - 1);
-  const idx = pixelIndex(cx, cy, w);
-  const d = src.data;
-  return [d[idx], d[idx + 1], d[idx + 2], d[idx + 3]];
 }
 
 function isSimilar(a, b, threshold) {

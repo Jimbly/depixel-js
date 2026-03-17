@@ -1,0 +1,20 @@
+{
+  "name": "depixel",
+  "version": "1.0.0",
+  "description": "Depixelizing Pixel Art by Kopf-Lischinski and Felix Kreuzer for Node.js",
+  "main": "lib.js",
+  "keywords": [
+    "xbrz",
+    "pixel",
+    "upscale"
+  ],
+  "author": "Jimb Esser (https://github.com/Jimbly)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jimbly/depixel-js.git"
+  },
+  "scripts": {
+    "test": "cd test && node test.js"
+  },
+  "license": "MIT"
+}
