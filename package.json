@@ -1,6 +1,6 @@
 {
   "name": "depixel",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Depixelizing Pixel Art by Kopf-Lischinski and Felix Kreuzer for Node.js",
   "main": "lib.js",
   "keywords": [
