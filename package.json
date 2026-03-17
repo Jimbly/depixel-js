@@ -1,6 +1,6 @@
 {
   "name": "depixel",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Depixelizing Pixel Art by Kopf-Lischinski and Felix Kreuzer for Node.js",
   "main": "lib.js",
   "keywords": [
@@ -9,6 +9,7 @@
     "upscale"
   ],
   "author": "Jimb Esser (https://github.com/Jimbly)",
+  "homepage": "https://github.com/Jimbly/depixel-js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jimbly/npm-publish.git"

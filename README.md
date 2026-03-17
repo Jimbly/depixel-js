@@ -1,5 +1,5 @@
-Kopf-Lischinski "Depixelizing Pixel Art" Node.js version
-=======================
+Kopf-Lischinski "Depixelizing Pixel Art" for Node.js
+====================================================
 
 Based on the following paper:
 * [Depixelizing Pixel Art](https://johanneskopf.de/publications/pixelart/)
@@ -12,7 +12,7 @@ Notes
 * Most GPU code semi-automatically converted to JavaScript by Codex (AI)
 * Example below is expanded to 12x via Depixel and then shrunk by 2x with linear filtering (e.g. 2xAA)
 
-<img src="./test/test-in-6x-nearest.png"><img src="./test/test-out-6x-bilinear.png">
+<img src="https://github.com/Jimbly/depixel-js/blob/HEAD/test/test-in-6x-nearest.png"><img src="https://github.com/Jimbly/depixel-js/blob/HEAD/test/test-out-6x-bilinear.png">
 
 ## API
 ```ts
