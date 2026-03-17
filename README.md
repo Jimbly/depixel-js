@@ -9,8 +9,9 @@ And the [source code](https://github.com/falichs/Depixelizing-Pixel-Art-on-GPUs)
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
 * Most GPU code semi-automatically converted to JavaScript by Codex (AI)
+* Example below is expanded to 12x via Depixel and then shrunk by 2x with linear filtering (e.g. 2xAA)
 
-<img src="./test/test-in-12x-nearest.png"><img src="./test/test-out-12x-bicubic.png">
+<img src="./test/test-in-6x-nearest.png"><img src="./test/test-out-6x-bilinear.png">
 
 ## API
 ```ts
