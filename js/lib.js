@@ -8,6 +8,7 @@ type Image = {
 type Opts = {
   height: number;
   threshold?: number; // 0..255, lower = fewer similarity edges
+  borderPx?: number; // pad input with this many pixels (1-2)
 }
 
 function scaleImage(src: Image, opts: Opts): Image;
@@ -1604,19 +1605,13 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
   return out;
 }
 
-function scaleImage(src, opts) {
-  if (!src || !src.data || typeof src.width !== 'number' || typeof src.height !== 'number') {
-    throw new Error('Invalid src image');
-  }
-  if (!opts || typeof opts.height !== 'number') {
-    throw new Error('opts.height is required');
-  }
+function runPipeline(src, outH, threshold) {
   const inW = src.width | 0;
   const inH = src.height | 0;
-  const outH = opts.height | 0;
-  const outW = Math.max(1, Math.round((inW / inH) * outH));
+  const outHeight = outH | 0;
+  const outWidth = Math.max(1, Math.round((inW / inH) * outHeight));
 
-  const similarityThreshold = (typeof opts.threshold === "number") ? opts.threshold : 255;
+  const similarityThreshold = (typeof threshold === "number") ? threshold : 255;
 
   const sim0 = buildSimilarityGraph(src, similarityThreshold);
   const sim1 = valenceUpdate(sim0);
@@ -1627,13 +1622,66 @@ function scaleImage(src, opts) {
   const optimized = optimizeCellGraph(cell, inW, inH);
   const corrected = computeCorrectedPositions(cell, optimized);
 
-  const outData = gaussRasterize(src, sim3, cell, corrected, outW, outH);
+  const outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight);
 
-  return {
-    data: Buffer.from(outData),
-    width: outW,
-    height: outH,
-  };
+  return { data: outData, width: outWidth, height: outHeight };
+}
+
+function scaleImage(src, opts) {
+  if (!src || !src.data || typeof src.width !== 'number' || typeof src.height !== 'number') {
+    throw new Error('Invalid src image');
+  }
+  if (!opts || typeof opts.height !== 'number') {
+    throw new Error('opts.height is required');
+  }
+  const inW = src.width | 0;
+  const inH = src.height | 0;
+  const outH = opts.height | 0;
+  const threshold = opts.threshold;
+
+  const borderPx = Math.max(0, Math.round(opts.borderPx || 0));
+  if (borderPx > 0) {
+    const padW = inW + 2 * borderPx;
+    const padH = inH + 2 * borderPx;
+    const padData = new Uint8Array(padW * padH * 4);
+    // fill magenta border
+    for (let y = 0; y < padH; y++) {
+      for (let x = 0; x < padW; x++) {
+        const idx = (y * padW + x) * 4;
+        padData[idx] = 255;
+        padData[idx + 1] = 0;
+        padData[idx + 2] = 255;
+        padData[idx + 3] = 255;
+      }
+    }
+    // copy src into center
+    for (let y = 0; y < inH; y++) {
+      const srcRow = y * inW * 4;
+      const dstRow = (y + borderPx) * padW * 4 + borderPx * 4;
+      padData.set(src.data.subarray(srcRow, srcRow + inW * 4), dstRow);
+    }
+    const scale = outH / inH;
+    const outHpad = Math.max(1, Math.round(padH * scale));
+    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold);
+
+    const padOut = Math.max(0, Math.round(borderPx * scale));
+    const outW = Math.max(1, Math.round((inW / inH) * outH));
+    const cropped = new Uint8Array(outW * outH * 4);
+
+    for (let y = 0; y < outH; y++) {
+      const srcY = y + padOut;
+      if (srcY < 0 || srcY >= padded.height) continue;
+      const srcRow = (srcY * padded.width + padOut) * 4;
+      const dstRow = y * outW * 4;
+      const len = Math.min(outW, Math.max(0, padded.width - padOut)) * 4;
+      cropped.set(padded.data.subarray(srcRow, srcRow + len), dstRow);
+    }
+
+    return { data: Buffer.from(cropped), width: outW, height: outH };
+  }
+
+  const result = runPipeline(src, outH, threshold);
+  return { data: Buffer.from(result.data), width: result.width, height: result.height };
 }
 
 exports.scaleImage = scaleImage;
