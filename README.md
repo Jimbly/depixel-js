@@ -2,10 +2,10 @@ Kopf-Lischinski "Depixelizing Pixel Art" for Node.js
 ====================================================
 
 Based on the following paper:
-* [Depixelizing Pixel Art](https://johanneskopf.de/publications/pixelart/)
+* [Depixelizing Pixel Art](https://johanneskopf.de/publications/pixelart/) by Johannes Kopf & Dani Lischinski
 
 And the [source code](https://github.com/falichs/Depixelizing-Pixel-Art-on-GPUs) included with this paper:
-* [Depixelizing Pixel Art on GPUs](https://www.cg.tuwien.ac.at/research/publications/2014/KREUZER-2014-DPA/)
+* [Depixelizing Pixel Art on GPUs](https://www.cg.tuwien.ac.at/research/publications/2014/KREUZER-2014-DPA/) by Felix Kreuzer
 
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
