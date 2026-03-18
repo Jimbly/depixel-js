@@ -7,9 +7,10 @@ Based on the following paper:
 And the [source code](https://github.com/falichs/Depixelizing-Pixel-Art-on-GPUs) included with this paper:
 * [Depixelizing Pixel Art on GPUs](https://www.cg.tuwien.ac.at/research/publications/2014/KREUZER-2014-DPA/) by Felix Kreuzer
 
-Improvements upon original
+Improvements upon original GPU version:
 * Add a threshold parameter to adjust how close two colors need to be to be consider similar
 * Better handle alpha channels (treat as dissimilar from non-transparent pixels)
+* Fix stretching/scaling due to texel misalignment
 
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
