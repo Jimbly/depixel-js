@@ -4,12 +4,10 @@ const { PNG } = require('pngjs');
 const { scaleImage } = require('../');
 
 const PNG_RGBA = 6;
+let scale = 6;
 
 let src = PNG.sync.read(fs.readFileSync(__dirname + '/test-in.png'));
-
-let scale = 6;
 let dst = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
-
 let res = scaleImage({
   data: src.data, // Buffer
   width: src.width,
@@ -19,7 +17,6 @@ let res = scaleImage({
 });
 assert.equal(res.data.length, dst.data.length);
 res.data.copy(dst.data);
-
 fs.writeFileSync(__dirname + '/test-out.png', PNG.sync.write(dst));
 
 let dstHard = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
@@ -36,14 +33,16 @@ assert.equal(resHard.data.length, dstHard.data.length);
 resHard.data.copy(dstHard.data);
 fs.writeFileSync(__dirname + '/test-out-hard.png', PNG.sync.write(dstHard));
 
-// Verify things line up
+//////////////////////////////////////////////////////////////////////////
+// Verify things line up, and check for other bugs fixed along the way
 
 let srcNearest = PNG.sync.read(fs.readFileSync(__dirname + '/test-in-6x-nearest.png'));
 assert.equal(srcNearest.data.length, dstHard.data.length);
 let had_error = false;
 function check(x, y, w, h) {
   let valid = true;
-  console.log('Expected Depixel');
+  let logs = [];
+  logs.push('Expected Depixel');
   for (let yy = y; yy < y + h; ++yy) {
     let line1 = [];
     let line2 = [];
@@ -57,9 +56,10 @@ function check(x, y, w, h) {
         line2[line2.length - 1] = v2 < 127 ? 'W' : '-'
       }
     }
-    console.log(`${line1.join('')} ${line2.join('')}`);
+    logs.push(`${line1.join('')} ${line2.join('')}`);
   }
   if (!valid) {
+    console.log(logs.join('\n'));
     console.error('Vertical stretching detected');
     had_error = true;
   }

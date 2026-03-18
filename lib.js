@@ -1833,30 +1833,18 @@ function scaleImage(src, opts) {
 
   const borderPx = Math.max(0, Math.round(opts.borderPx || 0));
   if (borderPx > 0) {
-    const doInvisBorder = Math.min(
-      src.data[3],
-      src.data[(inW - 1) * 4 + 3],
-      src.data[(inH - 1) * inW * 4 + 3],
-      src.data[((inH - 1) * inW + (inW - 1)) * 4 + 3],
-    ) < 255;
     const padW = inW + 2 * borderPx;
     const padH = inH + 2 * borderPx;
     const padData = new Uint8Array(padW * padH * 4);
-    // fill magenta border (invisible if original image appears to have invisible edges)
+    // copy src into center, expand into borders
     for (let y = 0; y < padH; y++) {
-      for (let x = 0; x < padW; x++) {
-        const idx = (y * padW + x) * 4;
-        padData[idx] = doInvisBorder ? 0 : 255;
-        padData[idx + 1] = 0;
-        padData[idx + 2] = doInvisBorder ? 0 : 255;
-        padData[idx + 3] = doInvisBorder ? 0 : 255;
-      }
-    }
-    // copy src into center
-    for (let y = 0; y < inH; y++) {
-      const srcRow = y * inW * 4;
-      const dstRow = (y + borderPx) * padW * 4 + borderPx * 4;
+      const srcRow = Math.min(inH - 1, Math.max(0, y - borderPx)) * inW * 4;
+      const dstRow = y * padW * 4 + borderPx * 4;
       padData.set(src.data.subarray(srcRow, srcRow + inW * 4), dstRow);
+      for (let ii = 0; ii < borderPx * 4; ++ii) {
+        padData[dstRow - borderPx * 4 + ii] = src.data[srcRow + ii % 4];
+        padData[dstRow + inW * 4 + ii] = src.data[srcRow + ii % 4];
+      }
     }
     const scale = outH / inH;
     const outHpad = Math.max(1, Math.round(padH * scale));
