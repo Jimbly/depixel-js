@@ -1472,16 +1472,16 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         let pointA = calcSplinePoint(p0, p1, p2, 0.0);
         for (let t = STEP; t < (1.0 + STEP); t += STEP) {
           const pointB = calcSplinePoint(p0, p1, p2, t);
-          if (intersects(cellSpaceCoords, ULCoords, pointA, pointB)) {
+          if (influencingPixels[0] && intersects(cellSpaceCoords, ULCoords, pointA, pointB)) {
             influencingPixels[0] = false;
           }
-          if (intersects(cellSpaceCoords, URCoords, pointA, pointB)) {
+          if (influencingPixels[1] && intersects(cellSpaceCoords, URCoords, pointA, pointB)) {
             influencingPixels[1] = false;
           }
-          if (intersects(cellSpaceCoords, LLCoords, pointA, pointB)) {
+          if (influencingPixels[2] && intersects(cellSpaceCoords, LLCoords, pointA, pointB)) {
             influencingPixels[2] = false;
           }
-          if (intersects(cellSpaceCoords, LRCoords, pointA, pointB)) {
+          if (influencingPixels[3] && intersects(cellSpaceCoords, LRCoords, pointA, pointB)) {
             influencingPixels[3] = false;
           }
           pointA = pointB;
