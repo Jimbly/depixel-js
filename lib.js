@@ -1428,8 +1428,8 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
     for (let ox = 0; ox < outW; ox++) {
       let influencingPixels = [true, true, true, true];
       const cellSpaceCoords = [
-        (w - 1) * (ox / (outW - 1)),
-        (h - 1) * (oy / (outH - 1)),
+        (w * (ox + 0.5) / outW) - 0.5,
+        (h * (oy + 0.5) / outH) - 0.5,
       ];
       const fragmentBaseKnotIndex = (2 * Math.floor(cellSpaceCoords[0]) + Math.floor(cellSpaceCoords[1]) * 2 * (w - 1)) | 0;
       const node0flags = cell.flags[fragmentBaseKnotIndex] | 0;
