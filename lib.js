@@ -1075,8 +1075,8 @@ function optimizeCellGraph(cell, width, height) {
   function calcPositionalEnergy(pNew, pOld) {
     const dx = pNew[0] - pOld[0];
     const dy = pNew[1] - pOld[1];
-    const dist = POSITIONAL_ENERGY_SCALING * hypot(dx, dy);
-    return dist * dist * dist * dist;
+    const distSq = POSITIONAL_ENERGY_SCALING * POSITIONAL_ENERGY_SCALING * (dx * dx + dy * dy);
+    return distSq * distSq;
   }
 
   function calcSegmentCurveEnergy(node1, node2, node3) {
@@ -1711,11 +1711,11 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       let weightSum = 0.0;
 
       function addWeightedColor(px, py) {
-        const col = fetchPixelRGBA(src, px, py);
+        const col = fetchPixelRGBA8(src, px, py);
         const dx = cellSpaceCoords[0] - px;
         const dy = cellSpaceCoords[1] - py;
-        const dist = hypot(dx, dy);
-        const weight = exp(-(dist * dist) * GAUSS_MULTIPLIER);
+        const distSq = dx * dx + dy * dy;
+        const weight = exp(-distSq * GAUSS_MULTIPLIER);
         colorSum[0] += col[0] * weight;
         colorSum[1] += col[1] * weight;
         colorSum[2] += col[2] * weight;
@@ -1804,10 +1804,10 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         out[outIdx + 2] = col[2];
         out[outIdx + 3] = col[3];
       } else {
-        out[outIdx] = clampInt(round((colorSum[0] / weightSum) * 255), 0, 255);
-        out[outIdx + 1] = clampInt(round((colorSum[1] / weightSum) * 255), 0, 255);
-        out[outIdx + 2] = clampInt(round((colorSum[2] / weightSum) * 255), 0, 255);
-        out[outIdx + 3] = clampInt(round((colorSum[3] / weightSum) * 255), 0, 255);
+        out[outIdx] = clampInt(round((colorSum[0] / weightSum)), 0, 255);
+        out[outIdx + 1] = clampInt(round((colorSum[1] / weightSum)), 0, 255);
+        out[outIdx + 2] = clampInt(round((colorSum[2] / weightSum)), 0, 255);
+        out[outIdx + 3] = clampInt(round((colorSum[3] / weightSum)), 0, 255);
       }
     }
   }
