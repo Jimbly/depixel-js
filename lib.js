@@ -80,6 +80,16 @@ function fetchPixelRGBA(src, x, y) {
   return [d[idx] / 255, d[idx + 1] / 255, d[idx + 2] / 255, d[idx + 3] / 255];
 }
 
+function fetchPixelRGBA8(src, x, y) {
+  const w = src.width;
+  const h = src.height;
+  const cx = clampInt(x, 0, w - 1);
+  const cy = clampInt(y, 0, h - 1);
+  const idx = pixelIndex(cx, cy, w);
+  const d = src.data;
+  return [d[idx], d[idx + 1], d[idx + 2], d[idx + 3]];
+}
+
 function isSimilar(a, b, threshold) {
   const yA = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
   const uA = 0.493 * (a[2] - yA);
@@ -1428,8 +1438,8 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
     for (let ox = 0; ox < outW; ox++) {
       let influencingPixels = [true, true, true, true];
       const cellSpaceCoords = [
-        (w * (ox + 0.5) / outW) - 0.5,
-        (h * (oy + 0.5) / outH) - 0.5,
+        (w * (ox + 0.5) / outW) - 0.5 + 0.00001,
+        (h * (oy + 0.5) / outH) - 0.5 + 0.00001,
       ];
       const fragmentBaseKnotIndex = (2 * Math.floor(cellSpaceCoords[0]) + Math.floor(cellSpaceCoords[1]) * 2 * (w - 1)) | 0;
       const node0flags = cell.flags[fragmentBaseKnotIndex] | 0;
@@ -1768,10 +1778,13 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
 
       const outIdx = (oy * outW + ox) * 4;
       if (weightSum === 0) {
-        out[outIdx] = 0;
-        out[outIdx + 1] = 0;
-        out[outIdx + 2] = 0;
-        out[outIdx + 3] = 255;
+        const nx = Math.round(cellSpaceCoords[0]);
+        const ny = Math.round(cellSpaceCoords[1]);
+        const col = fetchPixelRGBA8(src, nx, ny);
+        out[outIdx] = col[0];
+        out[outIdx + 1] = col[1];
+        out[outIdx + 2] = col[2];
+        out[outIdx + 3] = col[3];
       } else {
         out[outIdx] = clampInt(Math.round((colorSum[0] / weightSum) * 255), 0, 255);
         out[outIdx + 1] = clampInt(Math.round((colorSum[1] / weightSum) * 255), 0, 255);
