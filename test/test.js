@@ -40,6 +40,7 @@ fs.writeFileSync(__dirname + '/test-out-hard.png', PNG.sync.write(dstHard));
 
 let srcNearest = PNG.sync.read(fs.readFileSync(__dirname + '/test-in-6x-nearest.png'));
 assert.equal(srcNearest.data.length, dstHard.data.length);
+let had_error = false;
 function check(x, y, w, h) {
   let valid = true;
   console.log('Expected Depixel');
@@ -59,7 +60,8 @@ function check(x, y, w, h) {
     console.log(`${line1.join('')} ${line2.join('')}`);
   }
   if (!valid) {
-    throw new Error('Vertical stretching detected');
+    console.error('Vertical stretching detected');
+    had_error = true;
   }
 }
 check(118, 520, 8, 12);
@@ -71,12 +73,17 @@ function checkNoBlack(x, y, w, h) {
       let g = dstHard.data[(yy * dstHard.width + xx) * 4+1];
       let b = dstHard.data[(yy * dstHard.width + xx) * 4+2];
       if (!r && !g && !b) {
-        throw new Error(`Found unexpected black pixels at ${xx},${yy}`);
+        console.error(`Found unexpected black pixels at ${xx},${yy}`);
+        had_error = true;
       }
     }
   }
 }
 // Verify no black pixels in the middle of the scaled asset
-checkNoBlack(71, 37, 99, 261);
+checkNoBlack(102, 265, 99, 261);
 
-console.log('Test complete.');
+if (had_error) {
+  throw new Error('Tests failed');
+} else {
+  console.log('Test complete.');
+}
