@@ -64,4 +64,19 @@ function check(x, y, w, h) {
 }
 check(118, 520, 8, 12);
 
+function checkNoBlack(x, y, w, h) {
+  for (let yy = y; yy < y + h; ++yy) {
+    for (let xx = x; xx < x + w; ++xx) {
+      let r = dstHard.data[(yy * dstHard.width + xx) * 4];
+      let g = dstHard.data[(yy * dstHard.width + xx) * 4+1];
+      let b = dstHard.data[(yy * dstHard.width + xx) * 4+2];
+      if (!r && !g && !b) {
+        throw new Error(`Found unexpected black pixels at ${xx},${yy}`);
+      }
+    }
+  }
+}
+// Verify no black pixels in the middle of the scaled asset
+checkNoBlack(71, 37, 99, 261);
+
 console.log('Test complete.');
