@@ -36,4 +36,32 @@ assert.equal(resHard.data.length, dstHard.data.length);
 resHard.data.copy(dstHard.data);
 fs.writeFileSync(__dirname + '/test-out-hard.png', PNG.sync.write(dstHard));
 
+// Verify things line up
+
+let srcNearest = PNG.sync.read(fs.readFileSync(__dirname + '/test-in-6x-nearest.png'));
+assert.equal(srcNearest.data.length, dstHard.data.length);
+function check(x, y, w, h) {
+  let valid = true;
+  console.log('Expected Depixel');
+  for (let yy = y; yy < y + h; ++yy) {
+    let line1 = [];
+    let line2 = [];
+    for (let xx = x; xx < x + w; ++xx) {
+      let v1 = srcNearest.data[(yy * srcNearest.width + xx) * 4];
+      let v2 = dstHard.data[(yy * dstHard.width + xx) * 4];
+      line1.push(v1 < 127 ? 'X' : '.');
+      line2.push(v2 < 127 ? 'X' : '.');
+      if (v1 !== v2) {
+        valid = false;
+        line2[line2.length - 1] = v2 < 127 ? 'W' : '-'
+      }
+    }
+    console.log(`${line1.join('')} ${line2.join('')}`);
+  }
+  if (!valid) {
+    throw new Error('Vertical stretching detected');
+  }
+}
+check(118, 520, 8, 12);
+
 console.log('Test complete.');
