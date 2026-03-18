@@ -14,6 +14,18 @@ type Opts = {
 function scaleImage(src: Image, opts: Opts): Image;
 */
 
+const {
+  abs,
+  ceil,
+  exp,
+  floor,
+  hypot,
+  max,
+  min,
+  round,
+  sign,
+} = Math;
+
 const EDGE_HORVERT = 16;
 const EDGE_DIAGONAL_ULLR = 32;
 const EDGE_DIAGONAL_LLUR = 64;
@@ -55,6 +67,7 @@ const BRACKET_SEARCH_B = -0.1;
 const GOLD = 1.618034;
 const GLIMIT = 10.0;
 const TINY = 0.000000001;
+const ONEo255 = 1/255;
 
 function clampInt(v, lo, hi) {
   if (v < lo) {
@@ -77,7 +90,7 @@ function fetchPixelRGBA(src, x, y) {
   const cy = clampInt(y, 0, h - 1);
   const idx = pixelIndex(cx, cy, w);
   const d = src.data;
-  return [d[idx] / 255, d[idx + 1] / 255, d[idx + 2] / 255, d[idx + 3] / 255];
+  return [d[idx] * ONEo255, d[idx + 1] * ONEo255, d[idx + 2] * ONEo255, d[idx + 3] * ONEo255];
 }
 
 function fetchPixelRGBA8(src, x, y) {
@@ -90,6 +103,10 @@ function fetchPixelRGBA8(src, x, y) {
   return [d[idx], d[idx + 1], d[idx + 2], d[idx + 3]];
 }
 
+const THRESHOLD_a = 32 / 255;
+const THRESHOLD_y = 48 / 255;
+const THRESHOLD_u = 7 / 255;
+const THRESHOLD_v = 6 / 255;
 function isSimilar(a, b, threshold) {
   const yA = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
   const uA = 0.493 * (a[2] - yA);
@@ -97,16 +114,15 @@ function isSimilar(a, b, threshold) {
   const yB = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
   const uB = 0.493 * (b[2] - yB);
   const vB = 0.877 * (b[0] - yB);
-  const t = Math.max(0, Math.min(255, threshold | 0)) / 255.0;
-  if (Math.abs(a[3] - b[3]) <= (32.0/255) * t) {
-    if (a[3] + b[3] <= (32.0/255) * t) {
+  if (abs(a[3] - b[3]) <= THRESHOLD_a * threshold) {
+    if (a[3] + b[3] <= THRESHOLD_a * threshold) {
       // treat all alpha=0 pixels as similar, regardless of color
       // note: need an option for this if processing images with masks or premultiplied alpha
       return true;
     }
-    if (Math.abs(yA - yB) <= (48.0 / 255.0) * t) {
-      if (Math.abs(uA - uB) <= (7.0 / 255.0) * t) {
-        if (Math.abs(vA - vB) <= (6.0 / 255.0) * t) {
+    if (abs(yA - yB) <= THRESHOLD_y * threshold) {
+      if (abs(uA - uB) <= THRESHOLD_u * threshold) {
+        if (abs(vA - vB) <= THRESHOLD_v * threshold) {
           return true;
         }
       }
@@ -115,6 +131,8 @@ function isSimilar(a, b, threshold) {
   return false;
 }
 
+const THRESHOLD_CONTOUR = 100 / 255;
+const THRESHOLD_CONTOUR_SQ = THRESHOLD_CONTOUR * THRESHOLD_CONTOUR;
 function isContour(src, pL, pR) {
   const a = fetchPixelRGBA(src, pL[0], pL[1]);
   const b = fetchPixelRGBA(src, pR[0], pR[1]);
@@ -127,8 +145,8 @@ function isContour(src, pL, pR) {
   const dy = yA - yB;
   const du = uA - uB;
   const dv = vA - vB;
-  const dist = Math.sqrt(dy * dy + du * du + dv * dv);
-  return dist > 100.0 / 255.0;
+  const dist_sq = dy * dy + du * du + dv * dv;
+  return dist_sq > THRESHOLD_CONTOUR_SQ;
 }
 
 function buildSimilarityGraph(src, similarityThreshold) {
@@ -146,7 +164,7 @@ function buildSimilarityGraph(src, similarityThreshold) {
   }
 
   function getPixelCoords(gx, gy) {
-    return [Math.floor((gx - 1) / 2), Math.floor((gy - 1) / 2)];
+    return [floor((gx - 1) / 2), floor((gy - 1) / 2)];
   }
 
   for (let y = 0; y < sgH; y++) {
@@ -723,8 +741,8 @@ function computeCellGraph(src, sim) {
   }
 
   function checkForCorner(s1, s2) {
-    const n1 = Math.hypot(s1[0], s1[1]);
-    const n2 = Math.hypot(s2[0], s2[1]);
+    const n1 = hypot(s1[0], s1[1]);
+    const n2 = hypot(s2[0], s2[1]);
     if (n1 === 0 || n2 === 0) {
       return false;
     }
@@ -1057,7 +1075,7 @@ function optimizeCellGraph(cell, width, height) {
   function calcPositionalEnergy(pNew, pOld) {
     const dx = pNew[0] - pOld[0];
     const dy = pNew[1] - pOld[1];
-    const dist = POSITIONAL_ENERGY_SCALING * Math.hypot(dx, dy);
+    const dist = POSITIONAL_ENERGY_SCALING * hypot(dx, dy);
     return dist * dist * dist * dist;
   }
 
@@ -1089,7 +1107,7 @@ function optimizeCellGraph(cell, width, height) {
       const r = (bx - ax) * (fb - fc);
       const q = (bx - cx) * (fb - fa);
       const qr = q - r;
-      let u = bx - ((bx - cx) * q - (bx - ax) * r) / (2.0 * Math.sign(qr) * Math.max(Math.abs(qr), TINY));
+      let u = bx - ((bx - cx) * q - (bx - ax) * r) / (2.0 * sign(qr) * max(abs(qr), TINY));
       const ulim = bx + GLIMIT * (cx - bx);
       let fu;
       if ((bx - u) * (u - cx) > 0.0) {
@@ -1131,7 +1149,7 @@ function optimizeCellGraph(cell, width, height) {
 
   function searchOffset(pos, splineNeighbors) {
     let gradient = calcGradient(splineNeighbors[0], pos, splineNeighbors[1]);
-    const glen = Math.hypot(gradient[0], gradient[1]);
+    const glen = hypot(gradient[0], gradient[1]);
     if (glen <= 0.0) {
       return [0, 0, 0];
     }
@@ -1141,7 +1159,7 @@ function optimizeCellGraph(cell, width, height) {
     let x1 = 0;
     let x2 = 0;
     let x3 = bracket[2];
-    if (Math.abs(bracket[2] - bracket[1]) > Math.abs(bracket[1] - bracket[0])) {
+    if (abs(bracket[2] - bracket[1]) > abs(bracket[1] - bracket[0])) {
       x1 = bracket[1];
       x2 = bracket[1] + C * (bracket[2] - bracket[1]);
     } else {
@@ -1154,7 +1172,7 @@ function optimizeCellGraph(cell, width, height) {
     let f2 = calcSegmentCurveEnergy(splineNeighbors[0], pOpt, splineNeighbors[1]) + calcPositionalEnergy(pOpt, pos);
     let counter = 0;
     let fx;
-    while (Math.abs(x3 - x0) > TOL * (Math.abs(x1) + Math.abs(x2)) && (counter < LIMIT_SEARCH_ITERATIONS)) {
+    while (abs(x3 - x0) > TOL * (abs(x1) + abs(x2)) && (counter < LIMIT_SEARCH_ITERATIONS)) {
       counter++;
       if (f2 < f1) {
         x0 = x1; x1 = x2; x2 = R * x1 + C * x3;
@@ -1441,14 +1459,14 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         (w * (ox + 0.5) / outW) - 0.5 + 0.00001,
         (h * (oy + 0.5) / outH) - 0.5 + 0.00001,
       ];
-      const fragmentBaseKnotIndex = (2 * Math.floor(cellSpaceCoords[0]) + Math.floor(cellSpaceCoords[1]) * 2 * (w - 1)) | 0;
+      const fragmentBaseKnotIndex = (2 * floor(cellSpaceCoords[0]) + floor(cellSpaceCoords[1]) * 2 * (w - 1)) | 0;
       const node0flags = cell.flags[fragmentBaseKnotIndex] | 0;
       let hasCorrectedPosition = false;
 
-      const ULCoords = [Math.floor(cellSpaceCoords[0]), Math.ceil(cellSpaceCoords[1])];
-      const URCoords = [Math.ceil(cellSpaceCoords[0]), Math.ceil(cellSpaceCoords[1])];
-      const LLCoords = [Math.floor(cellSpaceCoords[0]), Math.floor(cellSpaceCoords[1])];
-      const LRCoords = [Math.ceil(cellSpaceCoords[0]), Math.floor(cellSpaceCoords[1])];
+      const ULCoords = [floor(cellSpaceCoords[0]), ceil(cellSpaceCoords[1])];
+      const URCoords = [ceil(cellSpaceCoords[0]), ceil(cellSpaceCoords[1])];
+      const LLCoords = [floor(cellSpaceCoords[0]), floor(cellSpaceCoords[1])];
+      const LRCoords = [ceil(cellSpaceCoords[0]), floor(cellSpaceCoords[1])];
 
       function findSegmentIntersections(p0, p1, p2) {
         let pointA = calcSplinePoint(p0, p1, p2, 0.0);
@@ -1696,8 +1714,8 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         const col = fetchPixelRGBA(src, px, py);
         const dx = cellSpaceCoords[0] - px;
         const dy = cellSpaceCoords[1] - py;
-        const dist = Math.hypot(dx, dy);
-        const weight = Math.exp(-(dist * dist) * GAUSS_MULTIPLIER);
+        const dist = hypot(dx, dy);
+        const weight = exp(-(dist * dist) * GAUSS_MULTIPLIER);
         colorSum[0] += col[0] * weight;
         colorSum[1] += col[1] * weight;
         colorSum[2] += col[2] * weight;
@@ -1778,18 +1796,18 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
 
       const outIdx = (oy * outW + ox) * 4;
       if (weightSum === 0) {
-        const nx = Math.round(cellSpaceCoords[0]);
-        const ny = Math.round(cellSpaceCoords[1]);
+        const nx = round(cellSpaceCoords[0]);
+        const ny = round(cellSpaceCoords[1]);
         const col = fetchPixelRGBA8(src, nx, ny);
         out[outIdx] = col[0];
         out[outIdx + 1] = col[1];
         out[outIdx + 2] = col[2];
         out[outIdx + 3] = col[3];
       } else {
-        out[outIdx] = clampInt(Math.round((colorSum[0] / weightSum) * 255), 0, 255);
-        out[outIdx + 1] = clampInt(Math.round((colorSum[1] / weightSum) * 255), 0, 255);
-        out[outIdx + 2] = clampInt(Math.round((colorSum[2] / weightSum) * 255), 0, 255);
-        out[outIdx + 3] = clampInt(Math.round((colorSum[3] / weightSum) * 255), 0, 255);
+        out[outIdx] = clampInt(round((colorSum[0] / weightSum) * 255), 0, 255);
+        out[outIdx + 1] = clampInt(round((colorSum[1] / weightSum) * 255), 0, 255);
+        out[outIdx + 2] = clampInt(round((colorSum[2] / weightSum) * 255), 0, 255);
+        out[outIdx + 3] = clampInt(round((colorSum[3] / weightSum) * 255), 0, 255);
       }
     }
   }
@@ -1801,9 +1819,9 @@ function runPipeline(src, outH, threshold) {
   const inW = src.width | 0;
   const inH = src.height | 0;
   const outHeight = outH | 0;
-  const outWidth = Math.max(1, Math.round((inW / inH) * outHeight));
+  const outWidth = max(1, round((inW / inH) * outHeight));
 
-  const similarityThreshold = (typeof threshold === "number") ? threshold : 255;
+  const similarityThreshold = ((typeof threshold === "number") ? threshold : 255) / 255;
 
   const sim0 = buildSimilarityGraph(src, similarityThreshold);
   const sim1 = valenceUpdate(sim0);
@@ -1831,14 +1849,14 @@ function scaleImage(src, opts) {
   const outH = opts.height | 0;
   const threshold = opts.threshold;
 
-  const borderPx = Math.max(0, Math.round(opts.borderPx || 0));
+  const borderPx = max(0, round(opts.borderPx || 0));
   if (borderPx > 0) {
     const padW = inW + 2 * borderPx;
     const padH = inH + 2 * borderPx;
     const padData = new Uint8Array(padW * padH * 4);
     // copy src into center, expand into borders
     for (let y = 0; y < padH; y++) {
-      const srcRow = Math.min(inH - 1, Math.max(0, y - borderPx)) * inW * 4;
+      const srcRow = min(inH - 1, max(0, y - borderPx)) * inW * 4;
       const dstRow = y * padW * 4 + borderPx * 4;
       padData.set(src.data.subarray(srcRow, srcRow + inW * 4), dstRow);
       for (let ii = 0; ii < borderPx * 4; ++ii) {
@@ -1847,11 +1865,11 @@ function scaleImage(src, opts) {
       }
     }
     const scale = outH / inH;
-    const outHpad = Math.max(1, Math.round(padH * scale));
+    const outHpad = max(1, round(padH * scale));
     const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold);
 
-    const padOut = Math.max(0, Math.round(borderPx * scale));
-    const outW = Math.max(1, Math.round((inW / inH) * outH));
+    const padOut = max(0, round(borderPx * scale));
+    const outW = max(1, round((inW / inH) * outH));
     const cropped = new Uint8Array(outW * outH * 4);
 
     for (let y = 0; y < outH; y++) {
@@ -1861,7 +1879,7 @@ function scaleImage(src, opts) {
       }
       const srcRow = (srcY * padded.width + padOut) * 4;
       const dstRow = y * outW * 4;
-      const len = Math.min(outW, Math.max(0, padded.width - padOut)) * 4;
+      const len = min(outW, max(0, padded.width - padOut)) * 4;
       cropped.set(padded.data.subarray(srcRow, srcRow + len), dstRow);
     }
 
