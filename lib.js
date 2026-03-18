@@ -89,6 +89,11 @@ function isSimilar(a, b, threshold) {
   const vB = 0.877 * (b[0] - yB);
   const t = Math.max(0, Math.min(255, threshold | 0)) / 255.0;
   if (Math.abs(a[3] - b[3]) <= (32.0/255) * t) {
+    if (a[3] + b[3] <= (32.0/255) * t) {
+      // treat all alpha=0 pixels as similar, regardless of color
+      // note: need an option for this if processing images with masks or premultiplied alpha
+      return true;
+    }
     if (Math.abs(yA - yB) <= (48.0 / 255.0) * t) {
       if (Math.abs(uA - uB) <= (7.0 / 255.0) * t) {
         if (Math.abs(vA - vB) <= (6.0 / 255.0) * t) {
