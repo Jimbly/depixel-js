@@ -20,6 +20,13 @@ function doTest(filename, outname, scale, opts, overrides) {
   assert.equal(res.data.length, dst.data.length);
   res.data.copy(dst.data);
   fs.writeFileSync(__dirname + '/' + outname, PNG.sync.write(dst));
+
+  if (opts && opts.outputSimilarityMask) {
+    dst = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
+    assert.equal(res.similarityData.length, dst.data.length);
+    res.similarityData.copy(dst.data);
+    fs.writeFileSync(__dirname + '/' + opts.outputSimilarityMask, PNG.sync.write(dst));
+  }
 }
 let scale = 6;
 
@@ -49,12 +56,9 @@ doTest('test2-in.png', 'test2-out-splines.png', 25, {
 let src_similarity = PNG.sync.read(fs.readFileSync(__dirname + '/test-in-similarity.png'));
 doTest('test-in.png', 'test-out-fromsim.png', scale, {
   threshold: 0,
+  borderPx: 2,
   similarity: src_similarity.data,
-});
-doTest('test-in.png', 'test-out-fromsim-newmask.png', scale, {
-  threshold: 0,
-  similarity: src_similarity.data,
-  renderMode: 'similarityMask',
+  outputSimilarityMask: 'test-out-fromsim-newmask.png',
 });
 // note: doesn't work because color informs spline shapes
 // doTest('test-in-similarity.png', 'test-out-fromsim-newmask.png', scale, {

@@ -27,20 +27,26 @@ type Image = {
   data: Buffer; // Or Uint8Array - pixels in RGBA byte order
   width: number;
   height: number;
+  similarityData?: Buffer;
 };
 
 type Opts = {
   height: number;
-  threshold?: number; // 0..255, lower = fewer similarity edges
+  threshold?: number; // 0..255, lower = fewer similarity edges; default 255
   // borderPx - pad input with this many pixels (1-2) - useful with
   //   `threshold=0` for complete hard edges
   borderPx?: number;
-  // if specified uses values here instead or RGBA values to determine
-  //   similarity - `threshold` (default 3) is used against sum of RGB
-  //   differences
+  // if `similarity` specified, uses values here instead or RGBA values to
+  //   determine similarity.  Note: `threshold` (default 3) is used against sum
+  //   of RGB differences in this buffer instead the default of using a
+  //   perceptual threshold based on color
   // note: color still impacts shape of splines
   similarity?: Buffer;
-  renderMode?: 'splines' | 'default' | 'similarityMask'; // default default
+  // if `outputSimilarityMask` and `similarity` is specified,
+  //   then `similarityData` in the return will contain a scaled up version of
+  //   the `similarity` mask (for use in post-processing, etc
+  outputSimilarityMask?: boolean; // default false
+  renderMode?: 'splines' | 'default'; // default default
   doOpt?: boolean; // default true
 }
 

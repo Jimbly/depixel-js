@@ -3,6 +3,7 @@ type Image = {
   data: Buffer; // Or Uint8Array - pixels in RGBA byte order
   width: number;
   height: number;
+  similarityData?: Buffer;
 };
 
 type Opts = {
@@ -10,7 +11,8 @@ type Opts = {
   threshold?: number; // 0..255, lower = fewer similarity edges
   borderPx?: number; // pad input with this many pixels (1-2)
   similarity?: Buffer; // if specified uses values here instead or RGBA values to determine similarity - threshold (default 3) is used against sum of RGB differences
-  renderMode?: 'splines' | 'similarityMask' | 'default';
+  outputSimilarityMask?: boolean; // if this and similarity are specified, return similarityData
+  renderMode?: 'splines' |  'default';
   doOpt?: boolean; // default true
 }
 
@@ -1340,10 +1342,10 @@ function computeCorrectedPositions(cell, optimized) {
   return corrected;
 }
 
-function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines) {
+function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outputSimilarityMask, similarity) {
   const w = src.width;
   const h = src.height;
-  const out = new Uint8Array(outW * outH * 4);
+  const out = Buffer.alloc(outW * outH * 4);
 
   function getG(x, y) {
     if (x < 0 || y < 0 || x >= sim.w || y >= sim.h) {
@@ -1475,6 +1477,15 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines) {
 
   const allSplines = needSplines ? [] : null;
   const allSplinesDone = {};
+  let similarityData;
+  let simImage;
+  if (outputSimilarityMask) {
+    similarityData = Buffer.alloc(outW * outH * 4);
+    simImage = {
+      ...src,
+      data: similarity,
+    };
+  }
 
   for (let oy = 0; oy < outH; oy++) {
     for (let ox = 0; ox < outW; ox++) {
@@ -1740,6 +1751,8 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines) {
 
       let colorSum = [0, 0, 0, 0];
       let weightSum = 0.0;
+      let maxWeight = 0;
+      let maxSimilarity = null;
 
       function addWeightedColor(px, py) {
         const col = fetchPixelRGBA8(src, px, py);
@@ -1752,6 +1765,11 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines) {
         colorSum[2] += col[2] * weight;
         colorSum[3] += col[3] * weight;
         weightSum += weight;
+        if (outputSimilarityMask && weight >= maxWeight) {
+          // note: would also be reasonable to blend this like we blend the colors
+          maxWeight = weight;
+          maxSimilarity = fetchPixelRGBA8(simImage, px, py);
+        }
       }
 
       if (influencingPixels[0]) {
@@ -1834,17 +1852,31 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines) {
         out[outIdx + 1] = col[1];
         out[outIdx + 2] = col[2];
         out[outIdx + 3] = col[3];
+        if (outputSimilarityMask) {
+          maxSimilarity = fetchPixelRGBA8(simImage, nx, ny);
+        }
       } else {
         out[outIdx] = clampInt(round((colorSum[0] / weightSum)), 0, 255);
         out[outIdx + 1] = clampInt(round((colorSum[1] / weightSum)), 0, 255);
         out[outIdx + 2] = clampInt(round((colorSum[2] / weightSum)), 0, 255);
         out[outIdx + 3] = clampInt(round((colorSum[3] / weightSum)), 0, 255);
       }
+      if (outputSimilarityMask) {
+        similarityData[outIdx] = maxSimilarity[0];
+        similarityData[outIdx + 1] = maxSimilarity[1];
+        similarityData[outIdx + 2] = maxSimilarity[2];
+        similarityData[outIdx + 3] = maxSimilarity[3];
+      }
     }
   }
 
-  out.allSplines = allSplines;
-  return out;
+  return {
+    data: out,
+    width: outW,
+    height: outH,
+    allSplines,
+    similarityData,
+  };
 }
 
 function renderSplines(out, outW, outH, inW, inH, allSplines) {
@@ -1909,7 +1941,7 @@ function renderSplines(out, outW, outH, inW, inH, allSplines) {
   }
 }
 
-function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
+function runPipeline(src, outH, threshold, similarity, renderMode, doOpt, outputSimilarityMask) {
   const inW = src.width | 0;
   const inH = src.height | 0;
   const outHeight = outH | 0;
@@ -1931,18 +1963,16 @@ function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
     corrected = computeCorrectedPositions(cell, cell.pos);
   }
 
-  const outData = gaussRasterize(
-    renderMode === 'similarityMask' ? {
-      ...src,
-      data: similarity,
-    } : src,
+  const out = gaussRasterize(
+    src,
     sim3, cell, corrected, outWidth, outHeight,
-    renderMode === 'splines');
+    renderMode === 'splines',
+    outputSimilarityMask, similarity);
   if (renderMode === 'splines') {
-    renderSplines(outData, outWidth, outHeight, inW, inH, outData.allSplines);
+    renderSplines(out.data, outWidth, outHeight, inW, inH, out.allSplines);
   }
 
-  return { data: outData, width: outWidth, height: outHeight };
+  return out;
 }
 
 function scaleImage(src, opts) {
@@ -1957,34 +1987,44 @@ function scaleImage(src, opts) {
   const outH = opts.height | 0;
   const similarity = opts.similarity;
   const threshold = typeof opts.threshold === 'number' ? opts.threshold : (similarity ? 3 : 255);
-  const renderMode = opts.renderMode;
+  const renderMode = opts.renderMode || 'default';
+  const outputSimilarityMask = opts.outputSimilarityMask || false;
   const doOpt = opts.doOpt ?? true;
-  if (renderMode === 'similarityMask' && !similarity) {
-    throw new Error('renderMode:similarityMask requires a similarity mask input');
+  if (outputSimilarityMask && !similarity) {
+    throw new Error('outputSimilarityMask requires a similarity mask input');
   }
 
   const borderPx = max(0, round(opts.borderPx || 0));
   if (borderPx > 0) {
     const padW = inW + 2 * borderPx;
     const padH = inH + 2 * borderPx;
-    const padData = new Uint8Array(padW * padH * 4);
+    const padData = Buffer.alloc(padW * padH * 4);
+    const padSimilarity = similarity && Buffer.alloc(padW * padH * 4);
     // copy src into center, expand into borders
     for (let y = 0; y < padH; y++) {
       const srcRow = min(inH - 1, max(0, y - borderPx)) * inW * 4;
       const dstRow = y * padW * 4 + borderPx * 4;
-      padData.set(src.data.subarray(srcRow, srcRow + inW * 4), dstRow);
+      src.data.copy(padData, dstRow, srcRow, srcRow + inW * 4);
+      if (padSimilarity) {
+        similarity.copy(padSimilarity, dstRow, srcRow, srcRow + inW * 4);
+      }
       for (let ii = 0; ii < borderPx * 4; ++ii) {
         padData[dstRow - borderPx * 4 + ii] = src.data[srcRow + ii % 4];
         padData[dstRow + inW * 4 + ii] = src.data[srcRow + (inW - 1) * 4 + ii % 4];
+        if (padSimilarity) {
+          padSimilarity[dstRow - borderPx * 4 + ii] = similarity[srcRow + ii % 4];
+          padSimilarity[dstRow + inW * 4 + ii] = similarity[srcRow + (inW - 1) * 4 + ii % 4];
+        }
       }
     }
     const scale = outH / inH;
     const outHpad = max(1, round(padH * scale));
-    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, similarity, renderMode, doOpt);
+    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, padSimilarity, renderMode, doOpt, outputSimilarityMask);
 
     const padOut = max(0, round(borderPx * scale));
     const outW = max(1, round((inW / inH) * outH));
-    const cropped = new Uint8Array(outW * outH * 4);
+    const cropped = Buffer.alloc(outW * outH * 4);
+    const croppedSimilarity = padded.similarityData && Buffer.alloc(outW * outH * 4);
     const srcData = padded.data;
 
     for (let y = 0; y < outH; y++) {
@@ -1995,14 +2035,27 @@ function scaleImage(src, opts) {
       const srcRow = (srcY * padded.width + padOut) * 4;
       const dstRow = y * outW * 4;
       const len = min(outW, max(0, padded.width - padOut)) * 4;
-      cropped.set(srcData.subarray(srcRow, srcRow + len), dstRow);
+      srcData.copy(cropped, dstRow, srcRow, srcRow + len);
+      if (padded.similarityData) {
+        padded.similarityData.copy(croppedSimilarity, dstRow, srcRow, srcRow + len);
+      }
     }
 
-    return { data: Buffer.from(cropped), width: outW, height: outH };
+    return {
+      data: cropped,
+      width: outW,
+      height: outH,
+      similarityData: croppedSimilarity,
+    };
   }
 
-  const result = runPipeline(src, outH, threshold, similarity, renderMode, doOpt);
-  return { data: Buffer.from(result.data), width: result.width, height: result.height };
+  const result = runPipeline(src, outH, threshold, similarity, renderMode, doOpt, outputSimilarityMask);
+  return {
+    data: result.data,
+    width: result.width,
+    height: result.height,
+    similarityData: result.similarityData,
+  };
 }
 
 exports.scaleImage = scaleImage;
