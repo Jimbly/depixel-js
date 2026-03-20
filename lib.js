@@ -1340,7 +1340,7 @@ function computeCorrectedPositions(cell, optimized) {
   return corrected;
 }
 
-function gaussRasterize(src, sim, cell, positions, outW, outH) {
+function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines) {
   const w = src.width;
   const h = src.height;
   const out = new Uint8Array(outW * outH * 4);
@@ -1473,7 +1473,8 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
     return cpArray;
   }
 
-  let allSplines = [];
+  const allSplines = needSplines ? [] : null;
+  const allSplinesDone = {};
 
   for (let oy = 0; oy < outH; oy++) {
     for (let ox = 0; ox < outW; ox++) {
@@ -1492,7 +1493,13 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       const LRCoords = [ceil(cellSpaceCoords[0]), floor(cellSpaceCoords[1])];
 
       function findSegmentIntersections(p0, p1, p2) {
-        allSplines.push([p0, p1, p2]);
+        if (allSplines) {
+          const key = [p0.join(), p1.join(), p2.join()].join();
+          if (!allSplinesDone[key]) {
+            allSplinesDone[key] = true;
+            allSplines.push([p0, p1, p2]);
+          }
+        }
         let pointA = calcSplinePoint(p0, p1, p2, 0.0);
         for (let t = STEP; t < (1.0 + STEP); t += STEP) {
           const pointB = calcSplinePoint(p0, p1, p2, t);
@@ -1885,22 +1892,11 @@ function renderSplines(out, outW, outH, inW, inH, allSplines) {
     return [a * p0[0] + b * p1[0] + t2 * p2[0], a * p0[1] + b * p1[1] + t2 * p2[1]];
   }
 
-  let done = {};
   for (let i = 0; i < allSplines.length; i++) {
     const spline = allSplines[i];
-    let p0 = spline[0];
-    let p1 = spline[1];
-    let p2 = spline[2];
-    // not quite valid: we're actually using splines in the other order, so draw them?
-    // if (p2[0] < p0[0] || p2[0] === p0[0] && p2[1] < p0[1]) {
-    //   p0 = p2;
-    //   p2 = spline[0];
-    // }
-    let key = [p0.join(), p1.join(), p2.join()].join();
-    if (done[key]) {
-      continue;
-    }
-    done[key] = true;
+    const p0 = spline[0];
+    const p1 = spline[1];
+    const p2 = spline[2];
     let prev = null;
     for (let t = 0.0; t < (1.0 + STEP); t += STEP) {
       const p = calcSplinePoint(p0, p1, p2, t);
@@ -1935,7 +1931,7 @@ function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
     corrected = computeCorrectedPositions(cell, cell.pos);
   }
 
-  const outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight);
+  const outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight, renderMode === 'splines');
   if (renderMode === 'splines') {
     renderSplines(outData, outWidth, outHeight, inW, inH, outData.allSplines);
   }
