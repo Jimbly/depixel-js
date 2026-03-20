@@ -10,6 +10,8 @@ type Opts = {
   threshold?: number; // 0..255, lower = fewer similarity edges
   borderPx?: number; // pad input with this many pixels (1-2)
   similarity?: Buffer; // if specified uses values here instead or RGBA values to determine similarity - threshold (default 3) is used against sum of RGB differences
+  renderMode?: 'fullcellgraph';
+  doOpt?: boolean; // default true
 }
 
 function scaleImage(src: Image, opts: Opts): Image;
@@ -1834,7 +1836,104 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
   return out;
 }
 
-function runPipeline(src, outH, threshold, similarity) {
+function renderFullCellGraph(cell, positions, inW, inH, outW, outH) {
+  const out = new Uint8Array(outW * outH * 4);
+
+  function getPos(idx) {
+    return [positions[idx * 2], positions[idx * 2 + 1]];
+  }
+
+  function mapToOutput(p) {
+    const x = (p[0] / (inW - 1)) * (outW - 1);
+    const y = (p[1] / (inH - 1)) * (outH - 1);
+    return [x, y];
+  }
+
+  function drawLine(p0, p1) {
+    let x0 = Math.round(p0[0]);
+    let y0 = Math.round(p0[1]);
+    let x1 = Math.round(p1[0]);
+    let y1 = Math.round(p1[1]);
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      if (x0 >= 0 && x0 < outW && y0 >= 0 && y0 < outH) {
+        const idx = (y0 * outW + x0) * 4;
+        out[idx] = 0;
+        out[idx + 1] = 0;
+        out[idx + 2] = 0;
+        out[idx + 3] = 255;
+      }
+      if (x0 === x1 && y0 === y1) {
+        break;
+      }
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+    }
+  }
+
+  function calcSplinePoint(p0, p1, p2, t) {
+    const t2 = 0.5 * t * t;
+    const a = t2 - t + 0.5;
+    const b = -2.0 * t2 + t + 0.5;
+    return [a * p0[0] + b * p1[0] + t2 * p2[0], a * p0[1] + b * p1[1] + t2 * p2[1]];
+  }
+
+  function splineNeighborPos(neighborIndex, oppositeSplineFlag) {
+    const neighborFlags = cell.flags[neighborIndex] | 0;
+    if (neighborFlags >= HAS_NORTHERN_SPLINE && (neighborFlags & oppositeSplineFlag) !== oppositeSplineFlag) {
+      return getPos(neighborIndex + 1);
+    }
+    return getPos(neighborIndex);
+  }
+
+  const count = cell.flags.length;
+  for (let i = 0; i < count; i++) {
+    const flags = cell.flags[i] | 0;
+    if (flags <= 0) {
+      continue;
+    }
+    const base = i * 4;
+    const neighbors = [cell.neighbors[base], cell.neighbors[base + 1], cell.neighbors[base + 2], cell.neighbors[base + 3]];
+
+    const splineNeighbors = [];
+    if (neighbors[0] !== -1 && (flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR && (flags & HAS_NORTHERN_SPLINE) === HAS_NORTHERN_SPLINE) {
+      splineNeighbors.push(splineNeighborPos(neighbors[0], HAS_SOUTHERN_SPLINE));
+    }
+    if (neighbors[1] !== -1 && (flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR && (flags & HAS_EASTERN_SPLINE) === HAS_EASTERN_SPLINE) {
+      splineNeighbors.push(splineNeighborPos(neighbors[1], HAS_WESTERN_SPLINE));
+    }
+    if (neighbors[2] !== -1 && (flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR && (flags & HAS_SOUTHERN_SPLINE) === HAS_SOUTHERN_SPLINE) {
+      splineNeighbors.push(splineNeighborPos(neighbors[2], HAS_NORTHERN_SPLINE));
+    }
+    if (neighbors[3] !== -1 && (flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR && (flags & HAS_WESTERN_SPLINE) === HAS_WESTERN_SPLINE) {
+      splineNeighbors.push(splineNeighborPos(neighbors[3], HAS_EASTERN_SPLINE));
+    }
+
+    if (splineNeighbors.length === 2) {
+      const p0 = splineNeighbors[0];
+      const p1 = getPos(i);
+      const p2 = splineNeighbors[1];
+      let prev = null;
+      for (let t = 0.0; t < (1.0 + STEP); t += STEP) {
+        const p = calcSplinePoint(p0, p1, p2, t);
+        const outP = mapToOutput(p);
+        if (prev) {
+          drawLine(prev, outP);
+        }
+        prev = outP;
+      }
+    }
+  }
+
+  return out;
+}
+
+function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
   const inW = src.width | 0;
   const inH = src.height | 0;
   const outHeight = outH | 0;
@@ -1848,10 +1947,20 @@ function runPipeline(src, outH, threshold, similarity) {
   const sim3 = valenceUpdate(sim2);
 
   const cell = computeCellGraph(src, sim3);
-  const optimized = optimizeCellGraph(cell, inW, inH);
-  const corrected = computeCorrectedPositions(cell, optimized);
+  let corrected;
+  if (doOpt) {
+    const optimized = optimizeCellGraph(cell, inW, inH);
+    corrected = computeCorrectedPositions(cell, optimized);
+  } else {
+    corrected = computeCorrectedPositions(cell, cell.pos);
+  }
 
-  const outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight);
+  let outData;
+  if (renderMode === 'fullcellgraph') {
+    outData = renderFullCellGraph(cell, corrected, inW, inH, outWidth, outHeight);
+  } else {
+    outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight);
+  }
 
   return { data: outData, width: outWidth, height: outHeight };
 }
@@ -1868,6 +1977,8 @@ function scaleImage(src, opts) {
   const outH = opts.height | 0;
   const similarity = opts.similarity;
   const threshold = typeof opts.threshold === 'number' ? opts.threshold : (similarity ? 3 : 255);
+  const renderMode = opts.renderMode;
+  const doOpt = opts.doOpt ?? true;
 
   const borderPx = max(0, round(opts.borderPx || 0));
   if (borderPx > 0) {
@@ -1886,11 +1997,12 @@ function scaleImage(src, opts) {
     }
     const scale = outH / inH;
     const outHpad = max(1, round(padH * scale));
-    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, similarity);
+    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, similarity, renderMode, doOpt);
 
     const padOut = max(0, round(borderPx * scale));
     const outW = max(1, round((inW / inH) * outH));
     const cropped = new Uint8Array(outW * outH * 4);
+    const srcData = padded.data;
 
     for (let y = 0; y < outH; y++) {
       const srcY = y + padOut;
@@ -1900,13 +2012,13 @@ function scaleImage(src, opts) {
       const srcRow = (srcY * padded.width + padOut) * 4;
       const dstRow = y * outW * 4;
       const len = min(outW, max(0, padded.width - padOut)) * 4;
-      cropped.set(padded.data.subarray(srcRow, srcRow + len), dstRow);
+      cropped.set(srcData.subarray(srcRow, srcRow + len), dstRow);
     }
 
     return { data: Buffer.from(cropped), width: outW, height: outH };
   }
 
-  const result = runPipeline(src, outH, threshold, similarity);
+  const result = runPipeline(src, outH, threshold, similarity, renderMode, doOpt);
   return { data: Buffer.from(result.data), width: result.width, height: result.height };
 }
 
