@@ -7,7 +7,6 @@ const PNG_RGBA = 6;
 let scale = 6;
 
 let src = PNG.sync.read(fs.readFileSync(__dirname + '/test-in.png'));
-let dst = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
 let res = scaleImage({
   data: src.data, // Buffer
   width: src.width,
@@ -15,13 +14,28 @@ let res = scaleImage({
 }, {
   height: src.height * scale,
 });
+let dst = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
 assert.equal(res.data.length, dst.data.length);
 res.data.copy(dst.data);
 fs.writeFileSync(__dirname + '/test-out.png', PNG.sync.write(dst));
 
-let dstHard = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
+let src_similarity = PNG.sync.read(fs.readFileSync(__dirname + '/test-in-similarity.png'));
+res = scaleImage({
+  data: src.data, // Buffer
+  similarity: src_similarity.data,
+  width: src.width,
+  height: src.height,
+}, {
+  height: src.height * scale,
+});
+dst = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
+assert.equal(res.data.length, dst.data.length);
+res.data.copy(dst.data);
+fs.writeFileSync(__dirname + '/test-out-fromsim.png', PNG.sync.write(dst));
+
 let resHard = scaleImage({
   data: src.data,
+  similarity: src_similarity.data,
   width: src.width,
   height: src.height,
 }, {
@@ -29,6 +43,7 @@ let resHard = scaleImage({
   threshold: 0,
   borderPx: 1,
 });
+let dstHard = new PNG({ width: src.width * scale, height: src.height * scale, colorType: PNG_RGBA });
 assert.equal(resHard.data.length, dstHard.data.length);
 resHard.data.copy(dstHard.data);
 fs.writeFileSync(__dirname + '/test-out-hard.png', PNG.sync.write(dstHard));
