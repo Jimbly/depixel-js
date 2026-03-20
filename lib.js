@@ -9,6 +9,7 @@ type Opts = {
   height: number;
   threshold?: number; // 0..255, lower = fewer similarity edges
   borderPx?: number; // pad input with this many pixels (1-2)
+  similarity?: Buffer; // if specified uses values here instead or RGBA values to determine similarity - threshold (default 3) is used against sum of RGB differences
 }
 
 function scaleImage(src: Image, opts: Opts): Image;
@@ -149,7 +150,7 @@ function isContour(src, pL, pR) {
   return dist_sq > THRESHOLD_CONTOUR_SQ;
 }
 
-function buildSimilarityGraph(src, similarityThreshold) {
+function buildSimilarityGraph(src, similarityThreshold, similarity) {
   const w = src.width;
   const h = src.height;
   const sgW = 2 * w + 1;
@@ -167,6 +168,24 @@ function buildSimilarityGraph(src, similarityThreshold) {
     return [floor((gx - 1) / 2), floor((gy - 1) / 2)];
   }
 
+  let isSimilar2;
+  if (similarity) {
+    let simImage = {
+      ...src,
+      data: similarity,
+    };
+    isSimilar2 = function(p1, p2) {
+      let v1 = fetchPixelRGBA8(simImage, p1[0], p1[1]);
+      let v2 = fetchPixelRGBA8(simImage, p2[0], p2[1]);
+      let sum = abs(v1[0] - v2[0]) + abs(v1[1] - v2[1]) + abs(v1[2] - v2[2]);
+      return sum <= similarityThreshold;
+    }
+  } else {
+    isSimilar2 = function(p1, p2) {
+      return isSimilar(fetchPixelRGBA(src, p1[0], p1[1]), fetchPixelRGBA(src, p2[0], p2[1]), similarityThreshold);
+    }
+  }
+
   for (let y = 0; y < sgH; y++) {
     for (let x = 0; x < sgW; x++) {
       if (x === 0 || x === sgW - 1 || y === 0 || y === sgH - 1) {
@@ -181,19 +200,19 @@ function buildSimilarityGraph(src, similarityThreshold) {
         let diagonal = 0;
         let pA = getPixelCoords(x - 1, y + 1);
         let pB = getPixelCoords(x + 1, y - 1);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
+        if (isSimilar2(pA, pB)) {
           diagonal = EDGE_DIAGONAL_ULLR;
         }
         pA = getPixelCoords(x - 1, y - 1);
         pB = getPixelCoords(x + 1, y + 1);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
+        if (isSimilar2(pA, pB)) {
           diagonal |= EDGE_DIAGONAL_LLUR;
         }
         setRG(x, y, diagonal, 0);
       } else if (evalX === 0 && evalY === 1) {
         const pA = getPixelCoords(x - 1, y);
         const pB = getPixelCoords(x + 1, y);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
+        if (isSimilar2(pA, pB)) {
           setRG(x, y, EDGE_HORVERT, 0);
         } else {
           setRG(x, y, 0, 0);
@@ -201,7 +220,7 @@ function buildSimilarityGraph(src, similarityThreshold) {
       } else if (evalX === 1 && evalY === 0) {
         const pA = getPixelCoords(x, y - 1);
         const pB = getPixelCoords(x, y + 1);
-        if (isSimilar(fetchPixelRGBA(src, pA[0], pA[1]), fetchPixelRGBA(src, pB[0], pB[1]), similarityThreshold)) {
+        if (isSimilar2(pA, pB)) {
           setRG(x, y, EDGE_HORVERT, 0);
         } else {
           setRG(x, y, 0, 0);
@@ -1815,15 +1834,15 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
   return out;
 }
 
-function runPipeline(src, outH, threshold) {
+function runPipeline(src, outH, threshold, similarity) {
   const inW = src.width | 0;
   const inH = src.height | 0;
   const outHeight = outH | 0;
   const outWidth = max(1, round((inW / inH) * outHeight));
 
-  const similarityThreshold = ((typeof threshold === "number") ? threshold : 255) / 255;
+  const similarityThreshold = similarity ? threshold : ((typeof threshold === "number") ? threshold : 255) / 255;
 
-  const sim0 = buildSimilarityGraph(src, similarityThreshold);
+  const sim0 = buildSimilarityGraph(src, similarityThreshold, similarity);
   const sim1 = valenceUpdate(sim0);
   const sim2 = eliminateCrossings(sim1);
   const sim3 = valenceUpdate(sim2);
@@ -1847,7 +1866,8 @@ function scaleImage(src, opts) {
   const inW = src.width | 0;
   const inH = src.height | 0;
   const outH = opts.height | 0;
-  const threshold = opts.threshold;
+  const similarity = opts.similarity;
+  const threshold = typeof opts.threshold === 'number' ? opts.threshold : (similarity ? 3 : 255);
 
   const borderPx = max(0, round(opts.borderPx || 0));
   if (borderPx > 0) {
@@ -1866,7 +1886,7 @@ function scaleImage(src, opts) {
     }
     const scale = outH / inH;
     const outHpad = max(1, round(padH * scale));
-    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold);
+    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, similarity);
 
     const padOut = max(0, round(borderPx * scale));
     const outW = max(1, round((inW / inH) * outH));
@@ -1886,7 +1906,7 @@ function scaleImage(src, opts) {
     return { data: Buffer.from(cropped), width: outW, height: outH };
   }
 
-  const result = runPipeline(src, outH, threshold);
+  const result = runPipeline(src, outH, threshold, similarity);
   return { data: Buffer.from(result.data), width: result.width, height: result.height };
 }
 
