@@ -11,6 +11,7 @@ Improvements upon original GPU version:
 * Add a threshold parameter to adjust how close two colors need to be to be consider similar
 * Better handle alpha channels (treat as dissimilar from non-transparent pixels)
 * Fix stretching/scaling due to texel misalignment
+* Add option to pass in a similarity map
 
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
@@ -30,7 +31,16 @@ type Image = {
 type Opts = {
   height: number;
   threshold?: number; // 0..255, lower = fewer similarity edges
-  borderPx?: number; // pad input with this many pixels (1-2) - useful with `threshold=0` for complete hard edges
+  // borderPx - pad input with this many pixels (1-2) - useful with
+  //   `threshold=0` for complete hard edges
+  borderPx?: number;
+  // if specified uses values here instead or RGBA values to determine
+  //   similarity - `threshold` (default 3) is used against sum of RGB
+  //   differences
+  // note: color still impacts shape of splines
+  similarity?: Buffer;
+  renderMode?: 'splines' | 'default'; // default default
+  doOpt?: boolean; // default true
 }
 
 function scaleImage(src: Image, opts: Opts): Image;
