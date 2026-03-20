@@ -1881,7 +1881,7 @@ function scaleImage(src, opts) {
       padData.set(src.data.subarray(srcRow, srcRow + inW * 4), dstRow);
       for (let ii = 0; ii < borderPx * 4; ++ii) {
         padData[dstRow - borderPx * 4 + ii] = src.data[srcRow + ii % 4];
-        padData[dstRow + inW * 4 + ii] = src.data[srcRow + ii % 4];
+        padData[dstRow + inW * 4 + ii] = src.data[srcRow + (inW - 1) * 4 + ii % 4];
       }
     }
     const scale = outH / inH;
