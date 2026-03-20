@@ -25,6 +25,17 @@ let scale = 6;
 
 doTest('test-in.png', 'test-out.png', scale);
 
+doTest('test2-in.png', 'test2-out-noopt.png', 25, {
+  threshold: 0,
+  borderPx: 2,
+  doOpt: false,
+});
+doTest('test2-in.png', 'test2-out-noopt-splines.png', 25, {
+  threshold: 0,
+  borderPx: 2,
+  doOpt: false,
+  renderMode: 'fullcellgraph2',
+});
 doTest('test2-in.png', 'test2-out.png', 25, {
   threshold: 0,
   borderPx: 2,
@@ -32,7 +43,7 @@ doTest('test2-in.png', 'test2-out.png', 25, {
 doTest('test2-in.png', 'test2-out-splines.png', 25, {
   threshold: 0,
   borderPx: 2,
-  renderMode: 'fullcellgraph',
+  renderMode: 'fullcellgraph2',
 });
 
 let src_similarity = PNG.sync.read(fs.readFileSync(__dirname + '/test-in-similarity.png'));

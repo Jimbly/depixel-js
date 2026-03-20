@@ -1222,18 +1222,18 @@ function optimizeCellGraph(cell, width, height) {
       let splineCount = 0;
       let splineNoOpt = false;
 
-      const hasN = (flags & HAS_NORTHERN_SPLINE) === HAS_NORTHERN_SPLINE;
-      const hasE = (flags & HAS_EASTERN_SPLINE) === HAS_EASTERN_SPLINE;
-      const hasS = (flags & HAS_SOUTHERN_SPLINE) === HAS_SOUTHERN_SPLINE;
-      const hasW = (flags & HAS_WESTERN_SPLINE) === HAS_WESTERN_SPLINE;
+      const hasN = Boolean(flags & HAS_NORTHERN_SPLINE);
+      const hasE = Boolean(flags & HAS_EASTERN_SPLINE);
+      const hasS = Boolean(flags & HAS_SOUTHERN_SPLINE);
+      const hasW = Boolean(flags & HAS_WESTERN_SPLINE);
 
       if (hasN) {
         const neighborflags = cell.flags[neighbors[0]] | 0;
-        if (((flags & DONT_OPTIMIZE_N) === DONT_OPTIMIZE_N) || ((neighborflags & DONT_OPTIMIZE_S) === DONT_OPTIMIZE_S)) {
+        if ((flags & DONT_OPTIMIZE_N) || (neighborflags & DONT_OPTIMIZE_S)) {
           splineNoOpt = true;
         }
         if (!splineNoOpt) {
-          if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_SOUTHERN_SPLINE) !== HAS_SOUTHERN_SPLINE)) {
+          if ((neighborflags & HAS_CORRECTED_POSITION) && !(neighborflags & HAS_SOUTHERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[0] + 1);
           } else {
             splineNeighbors[splineCount++] = getPos(neighbors[0]);
@@ -1242,11 +1242,11 @@ function optimizeCellGraph(cell, width, height) {
       }
       if (hasE) {
         const neighborflags = cell.flags[neighbors[1]] | 0;
-        if (((flags & DONT_OPTIMIZE_E) === DONT_OPTIMIZE_E) || ((neighborflags & DONT_OPTIMIZE_W) === DONT_OPTIMIZE_W)) {
+        if ((flags & DONT_OPTIMIZE_E) || (neighborflags & DONT_OPTIMIZE_W)) {
           splineNoOpt = true;
         }
         if (!splineNoOpt) {
-          if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_WESTERN_SPLINE) !== HAS_WESTERN_SPLINE)) {
+          if ((neighborflags & HAS_CORRECTED_POSITION) && !(neighborflags & HAS_WESTERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[1] + 1);
           } else {
             splineNeighbors[splineCount++] = getPos(neighbors[1]);
@@ -1255,11 +1255,11 @@ function optimizeCellGraph(cell, width, height) {
       }
       if (hasS) {
         const neighborflags = cell.flags[neighbors[2]] | 0;
-        if (((flags & DONT_OPTIMIZE_S) === DONT_OPTIMIZE_S) || ((neighborflags & DONT_OPTIMIZE_N) === DONT_OPTIMIZE_N)) {
+        if ((flags & DONT_OPTIMIZE_S) || (neighborflags & DONT_OPTIMIZE_N)) {
           splineNoOpt = true;
         }
         if (!splineNoOpt) {
-          if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_NORTHERN_SPLINE) !== HAS_NORTHERN_SPLINE)) {
+          if ((neighborflags & HAS_CORRECTED_POSITION) && !(neighborflags & HAS_NORTHERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[2] + 1);
           } else {
             splineNeighbors[splineCount++] = getPos(neighbors[2]);
@@ -1268,11 +1268,11 @@ function optimizeCellGraph(cell, width, height) {
       }
       if (hasW) {
         const neighborflags = cell.flags[neighbors[3]] | 0;
-        if (((flags & DONT_OPTIMIZE_W) === DONT_OPTIMIZE_W) || ((neighborflags & DONT_OPTIMIZE_E) === DONT_OPTIMIZE_E)) {
+        if ((flags & DONT_OPTIMIZE_W) || (neighborflags & DONT_OPTIMIZE_E)) {
           splineNoOpt = true;
         }
         if (!splineNoOpt) {
-          if (((neighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) && ((neighborflags & HAS_EASTERN_SPLINE) !== HAS_EASTERN_SPLINE)) {
+          if ((neighborflags & HAS_CORRECTED_POSITION) && !(neighborflags & HAS_EASTERN_SPLINE)) {
             splineNeighbors[splineCount++] = getPos(neighbors[3] + 1);
           } else {
             splineNeighbors[splineCount++] = getPos(neighbors[3]);
@@ -1314,16 +1314,16 @@ function computeCorrectedPositions(cell, optimized) {
       const parentNeighborIndices = [cell.neighbors[base], cell.neighbors[base + 1], cell.neighbors[base + 2], cell.neighbors[base + 3]];
       const splinePoints = [null, null];
       let countSp = 0;
-      if ((parentFlags & HAS_NORTHERN_SPLINE) === HAS_NORTHERN_SPLINE) {
+      if (parentFlags & HAS_NORTHERN_SPLINE) {
         splinePoints[countSp++] = getPos(parentNeighborIndices[0]);
       }
-      if ((parentFlags & HAS_EASTERN_SPLINE) === HAS_EASTERN_SPLINE) {
+      if (parentFlags & HAS_EASTERN_SPLINE) {
         splinePoints[countSp++] = getPos(parentNeighborIndices[1]);
       }
-      if ((parentFlags & HAS_SOUTHERN_SPLINE) === HAS_SOUTHERN_SPLINE) {
+      if (parentFlags & HAS_SOUTHERN_SPLINE) {
         splinePoints[countSp++] = getPos(parentNeighborIndices[2]);
       }
-      if ((parentFlags & HAS_WESTERN_SPLINE) === HAS_WESTERN_SPLINE) {
+      if (parentFlags & HAS_WESTERN_SPLINE) {
         splinePoints[countSp++] = getPos(parentNeighborIndices[3]);
       }
       if (countSp === 2) {
@@ -1401,16 +1401,16 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
 
   function computeValence(flags) {
     let v = 0;
-    if ((flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
+    if (flags & HAS_NORTHERN_NEIGHBOR) {
       v++;
     }
-    if ((flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+    if (flags & HAS_EASTERN_NEIGHBOR) {
       v++;
     }
-    if ((flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+    if (flags & HAS_SOUTHERN_NEIGHBOR) {
       v++;
     }
-    if ((flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+    if (flags & HAS_WESTERN_NEIGHBOR) {
       v++;
     }
     return v;
@@ -1443,7 +1443,7 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       if ((node0neighborFlags & checkFwd[0]) === checkFwd[0]) {
         const neighborsNeighborIndex = getNeighborIndex(node0neighborIndex, dir);
         const neighborsNeighborflags = cell.flags[neighborsNeighborIndex] | 0;
-        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+        if (neighborsNeighborflags & HAS_CORRECTED_POSITION) {
           cpArray[1] = neighborsNeighborIndex + 1;
         } else {
           cpArray[1] = neighborsNeighborIndex;
@@ -1451,7 +1451,7 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       } else if ((node0neighborFlags & checkFwd[1]) === checkFwd[1]) {
         const neighborsNeighborIndex = getNeighborIndex(node0neighborIndex, chkdirs[0]);
         const neighborsNeighborflags = cell.flags[neighborsNeighborIndex] | 0;
-        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+        if (neighborsNeighborflags & HAS_CORRECTED_POSITION) {
           cpArray[1] = neighborsNeighborIndex + 1;
         } else {
           cpArray[1] = neighborsNeighborIndex;
@@ -1459,19 +1459,21 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       } else if ((node0neighborFlags & checkFwd[2]) === checkFwd[2]) {
         const neighborsNeighborIndex = getNeighborIndex(node0neighborIndex, chkdirs[1]);
         const neighborsNeighborflags = cell.flags[neighborsNeighborIndex] | 0;
-        if ((neighborsNeighborflags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+        if (neighborsNeighborflags & HAS_CORRECTED_POSITION) {
           cpArray[1] = neighborsNeighborIndex + 1;
         } else {
           cpArray[1] = neighborsNeighborIndex;
         }
       }
     } else {
-      if ((node0neighborFlags & HAS_CORRECTED_POSITION) === HAS_CORRECTED_POSITION) {
+      if (node0neighborFlags & HAS_CORRECTED_POSITION) {
         cpArray[0]++;
       }
     }
     return cpArray;
   }
+
+  let allSplines = [];
 
   for (let oy = 0; oy < outH; oy++) {
     for (let ox = 0; ox < outW; ox++) {
@@ -1490,6 +1492,7 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       const LRCoords = [ceil(cellSpaceCoords[0]), floor(cellSpaceCoords[1])];
 
       function findSegmentIntersections(p0, p1, p2) {
+        allSplines.push([p0, p1, p2]);
         let pointA = calcSplinePoint(p0, p1, p2, 0.0);
         for (let t = STEP; t < (1.0 + STEP); t += STEP) {
           const pointB = calcSplinePoint(p0, p1, p2, t);
@@ -1520,13 +1523,13 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         let node0pos = getPos(fragmentBaseKnotIndex);
         if (node0valence === 1) {
           let cpArray = [-1, -1];
-          if ((node0flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
+          if (node0flags & HAS_NORTHERN_NEIGHBOR) {
             cpArray = getCPs(node0neighbors[0], NORTH);
-          } else if ((node0flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+          } else if (node0flags & HAS_EASTERN_NEIGHBOR) {
             cpArray = getCPs(node0neighbors[1], EAST);
-          } else if ((node0flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+          } else if (node0flags & HAS_SOUTHERN_NEIGHBOR) {
             cpArray = getCPs(node0neighbors[2], SOUTH);
-          } else if ((node0flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+          } else if (node0flags & HAS_WESTERN_NEIGHBOR) {
             cpArray = getCPs(node0neighbors[3], WEST);
           }
           const p1pos = getPos(cpArray[0]);
@@ -1540,18 +1543,18 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
         } else if (node0valence === 2) {
           let cpArray = [-1, -1, -1, -1];
           let foundFirst = false;
-          if ((node0flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) { cpArray[0] = getCPs(node0neighbors[0], NORTH)[0]; cpArray[1] = getCPs(node0neighbors[0], NORTH)[1]; foundFirst = true; }
-          if ((node0flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+          if (node0flags & HAS_NORTHERN_NEIGHBOR) { cpArray[0] = getCPs(node0neighbors[0], NORTH)[0]; cpArray[1] = getCPs(node0neighbors[0], NORTH)[1]; foundFirst = true; }
+          if (node0flags & HAS_EASTERN_NEIGHBOR) {
             const tmp = getCPs(node0neighbors[1], EAST);
             if (foundFirst) { cpArray[2] = tmp[0]; cpArray[3] = tmp[1]; }
             else { cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
           }
-          if ((node0flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+          if (node0flags & HAS_SOUTHERN_NEIGHBOR) {
             const tmp = getCPs(node0neighbors[2], SOUTH);
             if (foundFirst) { cpArray[2] = tmp[0]; cpArray[3] = tmp[1]; }
             else { cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
           }
-          if ((node0flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+          if (node0flags & HAS_WESTERN_NEIGHBOR) {
             const tmp = getCPs(node0neighbors[3], WEST);
             cpArray[2] = tmp[0]; cpArray[3] = tmp[1];
           }
@@ -1576,24 +1579,24 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
           let foundFirst = false;
           let tBaseDir = 0;
           let tBaseNeighborIndex = -1;
-          if ((node0flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
-            if ((node0flags & HAS_NORTHERN_SPLINE) === HAS_NORTHERN_SPLINE) { const tmp = getCPs(node0neighbors[0], NORTH); cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
+          if (node0flags & HAS_NORTHERN_NEIGHBOR) {
+            if (node0flags & HAS_NORTHERN_SPLINE) { const tmp = getCPs(node0neighbors[0], NORTH); cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
             else { tBaseDir = NORTH; tBaseNeighborIndex = node0neighbors[0]; }
           }
-          if ((node0flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
-            if ((node0flags & HAS_EASTERN_SPLINE) === HAS_EASTERN_SPLINE) {
+          if (node0flags & HAS_EASTERN_NEIGHBOR) {
+            if (node0flags & HAS_EASTERN_SPLINE) {
               const tmp = getCPs(node0neighbors[1], EAST);
               if (foundFirst) { cpArray[2] = tmp[0]; cpArray[3] = tmp[1]; } else { cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
             } else { tBaseDir = EAST; tBaseNeighborIndex = node0neighbors[1]; }
           }
-          if ((node0flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
-            if ((node0flags & HAS_SOUTHERN_SPLINE) === HAS_SOUTHERN_SPLINE) {
+          if (node0flags & HAS_SOUTHERN_NEIGHBOR) {
+            if (node0flags & HAS_SOUTHERN_SPLINE) {
               const tmp = getCPs(node0neighbors[2], SOUTH);
               if (foundFirst) { cpArray[2] = tmp[0]; cpArray[3] = tmp[1]; } else { cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
             } else { tBaseDir = SOUTH; tBaseNeighborIndex = node0neighbors[2]; }
           }
-          if ((node0flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
-            if ((node0flags & HAS_WESTERN_SPLINE) === HAS_WESTERN_SPLINE) {
+          if (node0flags & HAS_WESTERN_NEIGHBOR) {
+            if (node0flags & HAS_WESTERN_SPLINE) {
               const tmp = getCPs(node0neighbors[3], WEST);
               cpArray[2] = tmp[0]; cpArray[3] = tmp[1];
             } else { tBaseDir = WEST; tBaseNeighborIndex = node0neighbors[3]; }
@@ -1676,13 +1679,13 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
           const node1pos = getPos(fragmentBaseKnotIndex + 1);
           if (node1valence === 1) {
             let cpArray = [-1, -1];
-            if ((node1flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) {
+            if (node1flags & HAS_NORTHERN_NEIGHBOR) {
               cpArray = getCPs(node1neighbors[0], NORTH);
-            } else if ((node1flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+            } else if (node1flags & HAS_EASTERN_NEIGHBOR) {
               cpArray = getCPs(node1neighbors[1], EAST);
-            } else if ((node1flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+            } else if (node1flags & HAS_SOUTHERN_NEIGHBOR) {
               cpArray = getCPs(node1neighbors[2], SOUTH);
-            } else if ((node1flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+            } else if (node1flags & HAS_WESTERN_NEIGHBOR) {
               cpArray = getCPs(node1neighbors[3], WEST);
             }
             const p1pos = getPos(cpArray[0]);
@@ -1696,16 +1699,16 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
           } else if (node1valence === 2) {
             let cpArray = [-1, -1, -1, -1];
             let foundFirst = false;
-            if ((node1flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR) { const tmp = getCPs(node1neighbors[0], NORTH); cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
-            if ((node1flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR) {
+            if (node1flags & HAS_NORTHERN_NEIGHBOR) { const tmp = getCPs(node1neighbors[0], NORTH); cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
+            if (node1flags & HAS_EASTERN_NEIGHBOR) {
               const tmp = getCPs(node1neighbors[1], EAST);
               if (foundFirst) { cpArray[2] = tmp[0]; cpArray[3] = tmp[1]; } else { cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
             }
-            if ((node1flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR) {
+            if (node1flags & HAS_SOUTHERN_NEIGHBOR) {
               const tmp = getCPs(node1neighbors[2], SOUTH);
               if (foundFirst) { cpArray[2] = tmp[0]; cpArray[3] = tmp[1]; } else { cpArray[0] = tmp[0]; cpArray[1] = tmp[1]; foundFirst = true; }
             }
-            if ((node1flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR) {
+            if (node1flags & HAS_WESTERN_NEIGHBOR) {
               const tmp = getCPs(node1neighbors[3], WEST);
               cpArray[2] = tmp[0]; cpArray[3] = tmp[1];
             }
@@ -1833,6 +1836,7 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
     }
   }
 
+  out.allSplines = allSplines;
   return out;
 }
 
@@ -1850,12 +1854,12 @@ function renderFullCellGraph(cell, positions, inW, inH, outW, outH) {
   }
 
   function drawLine(p0, p1) {
-    let x0 = Math.round(p0[0]);
-    let y0 = Math.round(p0[1]);
-    let x1 = Math.round(p1[0]);
-    let y1 = Math.round(p1[1]);
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
+    let x0 = round(p0[0]);
+    let y0 = round(p0[1]);
+    let x1 = round(p1[0]);
+    let y1 = round(p1[1]);
+    const dx = abs(x1 - x0);
+    const dy = abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
     const sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
@@ -1901,16 +1905,16 @@ function renderFullCellGraph(cell, positions, inW, inH, outW, outH) {
     const neighbors = [cell.neighbors[base], cell.neighbors[base + 1], cell.neighbors[base + 2], cell.neighbors[base + 3]];
 
     const splineNeighbors = [];
-    if (neighbors[0] !== -1 && (flags & HAS_NORTHERN_NEIGHBOR) === HAS_NORTHERN_NEIGHBOR && (flags & HAS_NORTHERN_SPLINE) === HAS_NORTHERN_SPLINE) {
+    if (neighbors[0] !== -1 && (flags & HAS_NORTHERN_NEIGHBOR) && (flags & HAS_NORTHERN_SPLINE)) {
       splineNeighbors.push(splineNeighborPos(neighbors[0], HAS_SOUTHERN_SPLINE));
     }
-    if (neighbors[1] !== -1 && (flags & HAS_EASTERN_NEIGHBOR) === HAS_EASTERN_NEIGHBOR && (flags & HAS_EASTERN_SPLINE) === HAS_EASTERN_SPLINE) {
+    if (neighbors[1] !== -1 && (flags & HAS_EASTERN_NEIGHBOR) && (flags & HAS_EASTERN_SPLINE)) {
       splineNeighbors.push(splineNeighborPos(neighbors[1], HAS_WESTERN_SPLINE));
     }
-    if (neighbors[2] !== -1 && (flags & HAS_SOUTHERN_NEIGHBOR) === HAS_SOUTHERN_NEIGHBOR && (flags & HAS_SOUTHERN_SPLINE) === HAS_SOUTHERN_SPLINE) {
+    if (neighbors[2] !== -1 && (flags & HAS_SOUTHERN_NEIGHBOR) && (flags & HAS_SOUTHERN_SPLINE)) {
       splineNeighbors.push(splineNeighborPos(neighbors[2], HAS_NORTHERN_SPLINE));
     }
-    if (neighbors[3] !== -1 && (flags & HAS_WESTERN_NEIGHBOR) === HAS_WESTERN_NEIGHBOR && (flags & HAS_WESTERN_SPLINE) === HAS_WESTERN_SPLINE) {
+    if (neighbors[3] !== -1 && (flags & HAS_WESTERN_NEIGHBOR) && (flags & HAS_WESTERN_SPLINE)) {
       splineNeighbors.push(splineNeighborPos(neighbors[3], HAS_EASTERN_SPLINE));
     }
 
@@ -1931,6 +1935,80 @@ function renderFullCellGraph(cell, positions, inW, inH, outW, outH) {
   }
 
   return out;
+}
+
+function renderFullCellGraph2(out, outW, outH, inW, inH, allSplines) {
+  for (let ii = 0; ii < out.length; ++ii) {
+    out[ii] = 0;
+  }
+
+  function mapToOutput(p) {
+    const x = (p[0] / (inW - 1)) * (outW - 1);
+    const y = (p[1] / (inH - 1)) * (outH - 1);
+    return [x, y];
+  }
+
+  function drawLine(p0, p1) {
+    let x0 = round(p0[0]);
+    let y0 = round(p0[1]);
+    let x1 = round(p1[0]);
+    let y1 = round(p1[1]);
+    const dx = abs(x1 - x0);
+    const dy = abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      if (x0 >= 0 && x0 < outW && y0 >= 0 && y0 < outH) {
+        const idx = (y0 * outW + x0) * 4;
+        out[idx] = 0;
+        out[idx + 1] = 0;
+        out[idx + 2] = 0;
+        out[idx + 3] = 255;
+      }
+      if (x0 === x1 && y0 === y1) {
+        break;
+      }
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+    }
+  }
+
+  function calcSplinePoint(p0, p1, p2, t) {
+    const t2 = 0.5 * t * t;
+    const a = t2 - t + 0.5;
+    const b = -2.0 * t2 + t + 0.5;
+    return [a * p0[0] + b * p1[0] + t2 * p2[0], a * p0[1] + b * p1[1] + t2 * p2[1]];
+  }
+
+  let done = {};
+  for (let i = 0; i < allSplines.length; i++) {
+    const spline = allSplines[i];
+    let p0 = spline[0];
+    let p1 = spline[1];
+    let p2 = spline[2];
+    // not quite valid: we're actually using splines in the other order, so draw them?
+    // if (p2[0] < p0[0] || p2[0] === p0[0] && p2[1] < p0[1]) {
+    //   p0 = p2;
+    //   p2 = spline[0];
+    // }
+    let key = [p0.join(), p1.join(), p2.join()].join();
+    if (done[key]) {
+      continue;
+    }
+    done[key] = true;
+    console.log(spline);
+    let prev = null;
+    for (let t = 0.0; t < (1.0 + STEP); t += STEP) {
+      const p = calcSplinePoint(p0, p1, p2, t);
+      const outP = mapToOutput(p);
+      if (prev) {
+        drawLine(prev, outP);
+      }
+      prev = outP;
+    }
+  }
 }
 
 function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
@@ -1960,6 +2038,9 @@ function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
     outData = renderFullCellGraph(cell, corrected, inW, inH, outWidth, outHeight);
   } else {
     outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight);
+    if (renderMode === 'fullcellgraph2') {
+      renderFullCellGraph2(outData, outWidth, outHeight, inW, inH, outData.allSplines);
+    }
   }
 
   return { data: outData, width: outWidth, height: outHeight };
