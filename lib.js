@@ -405,20 +405,20 @@ function eliminateCrossings(sim) {
           nNE = 8 * (2 - level) + (4 - level);
           nE  = 8 * (3 - level) + (4 - level);
           if (currentComponent === 0) {
-            if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTHWEST) === SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & WEST) === WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTHWEST) === NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTHEAST) === NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
           }
           if (currentComponent !== 0) {
-            if ((nhood & SOUTHWEST) === SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & WEST) === WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & NORTHWEST) === NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & NORTH) === NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & NORTHEAST) === NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
           }
           if (level > 0) {
             for (let i = 0; i < level * 2; i++) {
@@ -433,16 +433,16 @@ function eliminateCrossings(sim) {
               nNE = 8 * (2 - level) + (i + 5 - level);
               nE  = 8 * (3 - level) + (i + 5 - level);
               if (currentComponent === 0) {
-                if (((nhood & WEST) === WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & NORTHWEST) === NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & NORTHEAST) === NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                if ((nhood & WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
               }
               if (currentComponent !== 0) {
-                if ((nhood & NORTHWEST) === NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & NORTH) === NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & NORTHEAST) === NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
               }
             }
           }
@@ -460,20 +460,20 @@ function eliminateCrossings(sim) {
           nSE = 8 * (4 - level) + (5 + level);
           nS  = 8 * (4 - level) + (4 + level);
           if (currentComponent === 0) {
-            if (((nhood & WEST) === WEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTHWEST) === NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTHEAST) === NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTHEAST) === SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            if ((nhood & WEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
           }
           if (currentComponent !== 0) {
-            if ((nhood & NORTHWEST) === NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & NORTH) === NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & NORTHEAST) === NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & EAST) === EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & SOUTHEAST) === SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
           }
           if (level > 0) {
             for (let i = 0; i < level * 2; i++) {
@@ -488,16 +488,16 @@ function eliminateCrossings(sim) {
               nSE = 8 * (i + 5 - level) + (5 + level);
               nS = 8 * (i + 5 - level) + (4 + level);
               if (currentComponent === 0) {
-                if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & NORTHEAST) === NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTHEAST) === SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
               }
               if (currentComponent !== 0) {
-                if ((nhood & NORTHEAST) === NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & EAST) === EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & SOUTHEAST) === SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
               }
             }
           }
@@ -515,20 +515,20 @@ function eliminateCrossings(sim) {
           nSW = 8 * (5 + level) + (3 + level);
           nW = 8 * (4 + level) + (3 + level);
           if (currentComponent === 0) {
-            if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTHEAST) === NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTHEAST) === SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTHWEST) === SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & WEST) === WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTHEAST) && (lArray[nNE] !== 0)) { currentComponent = lArray[nNE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
           }
           if (currentComponent !== 0) {
-            if ((nhood & NORTHEAST) === NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & EAST) === EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & SOUTHEAST) === SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & SOUTH) === SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & SOUTHWEST) === SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTHEAST) { if (lArray[nNE] === 0) { lArray[nNE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
           }
 
           if (level > 0) {
@@ -544,18 +544,18 @@ function eliminateCrossings(sim) {
               nSW = 8 * (5 + level) + (i + 3 - level);
               nW = 8 * (4 + level) + (i + 3 - level);
               if (currentComponent === 0) {
-                if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTHEAST) === SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTHWEST) === SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & WEST) === WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
               }
               if (currentComponent !== 0) {
-                if ((nhood & EAST) === EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & SOUTHEAST) === SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & SOUTH) === SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & SOUTHWEST) === SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & WEST) === WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & EAST) { if (lArray[nE] === 0) { lArray[nE] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & SOUTHEAST) { if (lArray[nSE] === 0) { lArray[nSE] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
               }
             }
           }
@@ -573,20 +573,20 @@ function eliminateCrossings(sim) {
           nSE = 8 * (5 + level) + (4 - level);
           nE = 8 * (4 + level) + (4 - level);
           if (currentComponent === 0) {
-            if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & NORTHWEST) === NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & WEST) === WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTHWEST) === SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & SOUTHEAST) === SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-            else if (((nhood & EAST) === EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & SOUTHEAST) && (lArray[nSE] !== 0)) { currentComponent = lArray[nSE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+            else if ((nhood & EAST) && (lArray[nE] !== 0)) { currentComponent = lArray[nE]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
           }
           if (currentComponent !== 0) {
-            if ((nhood & NORTH) === NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & NORTHWEST) === NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & WEST) === WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & SOUTHWEST) === SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
-            if ((nhood & SOUTH) === SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
+            if (nhood & SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
           }
 
           if (level > 0) {
@@ -602,18 +602,18 @@ function eliminateCrossings(sim) {
               nSW = 8 * (i + 5 - level) + (2 - level);
               nS = 8 * (i + 5 - level) + (3 - level);
               if (currentComponent === 0) {
-                if (((nhood & NORTH) === NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & NORTHWEST) === NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & WEST) === WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTHWEST) === SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
-                else if (((nhood & SOUTH) === SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                if ((nhood & NORTH) && (lArray[nN] !== 0)) { currentComponent = lArray[nN]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & NORTHWEST) && (lArray[nNW] !== 0)) { currentComponent = lArray[nNW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & WEST) && (lArray[nW] !== 0)) { currentComponent = lArray[nW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTHWEST) && (lArray[nSW] !== 0)) { currentComponent = lArray[nSW]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
+                else if ((nhood & SOUTH) && (lArray[nS] !== 0)) { currentComponent = lArray[nS]; lArray[currentComponentIndex] = currentComponent; countForComponent(currentComponent); }
               }
               if (currentComponent !== 0) {
-                if ((nhood & NORTH) === NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & NORTHWEST) === NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & WEST) === WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & SOUTHWEST) === SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
-                if ((nhood & SOUTH) === SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & NORTH) { if (lArray[nN] === 0) { lArray[nN] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & NORTHWEST) { if (lArray[nNW] === 0) { lArray[nNW] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & WEST) { if (lArray[nW] === 0) { lArray[nW] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & SOUTHWEST) { if (lArray[nSW] === 0) { lArray[nSW] = currentComponent; countForComponent(currentComponent); } }
+                if (nhood & SOUTH) { if (lArray[nS] === 0) { lArray[nS] = currentComponent; countForComponent(currentComponent); } }
               }
             }
           }
@@ -1745,70 +1745,70 @@ function gaussRasterize(src, sim, cell, positions, outW, outH) {
       if (influencingPixels[0]) {
         addWeightedColor(ULCoords[0], ULCoords[1]);
         const edges = getG(2 * ULCoords[0] + 1, 2 * ULCoords[1] + 1);
-        if ((edges & SOUTHWEST) === SOUTHWEST) {
+        if (edges & SOUTHWEST) {
           addWeightedColor(ULCoords[0] - 1, ULCoords[1] - 1);
         }
-        if ((edges & WEST) === WEST) {
+        if (edges & WEST) {
           addWeightedColor(ULCoords[0] - 1, ULCoords[1]);
         }
-        if ((edges & NORTHWEST) === NORTHWEST) {
+        if (edges & NORTHWEST) {
           addWeightedColor(ULCoords[0] - 1, ULCoords[1] + 1);
         }
-        if ((edges & NORTH) === NORTH) {
+        if (edges & NORTH) {
           addWeightedColor(ULCoords[0], ULCoords[1] + 1);
         }
-        if ((edges & NORTHEAST) === NORTHEAST) {
+        if (edges & NORTHEAST) {
           addWeightedColor(ULCoords[0] + 1, ULCoords[1] + 1);
         }
       }
       if (influencingPixels[1]) {
         addWeightedColor(URCoords[0], URCoords[1]);
         const edges = getG(2 * URCoords[0] + 1, 2 * URCoords[1] + 1);
-        if ((edges & NORTH) === NORTH) {
+        if (edges & NORTH) {
           addWeightedColor(URCoords[0], URCoords[1] + 1);
         }
-        if ((edges & NORTHEAST) === NORTHEAST) {
+        if (edges & NORTHEAST) {
           addWeightedColor(URCoords[0] + 1, URCoords[1] + 1);
         }
-        if ((edges & EAST) === EAST) {
+        if (edges & EAST) {
           addWeightedColor(URCoords[0] + 1, URCoords[1]);
         }
-        if ((edges & SOUTHEAST) === SOUTHEAST) {
+        if (edges & SOUTHEAST) {
           addWeightedColor(URCoords[0] + 1, URCoords[1] - 1);
         }
       }
       if (influencingPixels[2]) {
         addWeightedColor(LLCoords[0], LLCoords[1]);
         const edges = getG(2 * LLCoords[0] + 1, 2 * LLCoords[1] + 1);
-        if ((edges & WEST) === WEST) {
+        if (edges & WEST) {
           addWeightedColor(LLCoords[0] - 1, LLCoords[1]);
         }
-        if ((edges & SOUTHWEST) === SOUTHWEST) {
+        if (edges & SOUTHWEST) {
           addWeightedColor(LLCoords[0] - 1, LLCoords[1] - 1);
         }
-        if ((edges & SOUTH) === SOUTH) {
+        if (edges & SOUTH) {
           addWeightedColor(LLCoords[0], LLCoords[1] - 1);
         }
-        if ((edges & SOUTHEAST) === SOUTHEAST) {
+        if (edges & SOUTHEAST) {
           addWeightedColor(LLCoords[0] + 1, LLCoords[1] - 1);
         }
       }
       if (influencingPixels[3]) {
         addWeightedColor(LRCoords[0], LRCoords[1]);
         const edges = getG(2 * LRCoords[0] + 1, 2 * LRCoords[1] + 1);
-        if ((edges & NORTHEAST) === NORTHEAST) {
+        if (edges & NORTHEAST) {
           addWeightedColor(LRCoords[0] + 1, LRCoords[1] + 1);
         }
-        if ((edges & EAST) === EAST) {
+        if (edges & EAST) {
           addWeightedColor(LRCoords[0] + 1, LRCoords[1]);
         }
-        if ((edges & SOUTHWEST) === SOUTHWEST) {
+        if (edges & SOUTHWEST) {
           addWeightedColor(LRCoords[0] - 1, LRCoords[1] - 1);
         }
-        if ((edges & SOUTH) === SOUTH) {
+        if (edges & SOUTH) {
           addWeightedColor(LRCoords[0], LRCoords[1] - 1);
         }
-        if ((edges & SOUTHEAST) === SOUTHEAST) {
+        if (edges & SOUTHEAST) {
           addWeightedColor(LRCoords[0] + 1, LRCoords[1] - 1);
         }
       }
