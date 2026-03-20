@@ -12,7 +12,7 @@ Improvements upon original GPU version:
 * Better handle alpha channels (treat as dissimilar from non-transparent pixels)
 * Fix stretching/scaling due to texel misalignment
 * Add option to pass in a similarity map
-  * Relatedly, renderMode:similarityMask outputs a scaled up similarity map (for use in post-processing, etc)
+  * Relatedly, `outputSimilarityMask` outputs a scaled up similarity map (for use in post-processing, etc)
 
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
