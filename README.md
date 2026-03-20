@@ -12,6 +12,7 @@ Improvements upon original GPU version:
 * Better handle alpha channels (treat as dissimilar from non-transparent pixels)
 * Fix stretching/scaling due to texel misalignment
 * Add option to pass in a similarity map
+  * Relatedly, renderMode:similarityMask outputs a scaled up similarity map (for use in post-processing, etc)
 
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
@@ -39,7 +40,7 @@ type Opts = {
   //   differences
   // note: color still impacts shape of splines
   similarity?: Buffer;
-  renderMode?: 'splines' | 'default'; // default default
+  renderMode?: 'splines' | 'default' | 'similarityMask'; // default default
   doOpt?: boolean; // default true
 }
 

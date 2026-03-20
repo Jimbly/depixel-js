@@ -51,12 +51,15 @@ doTest('test-in.png', 'test-out-fromsim.png', scale, {
   threshold: 0,
   similarity: src_similarity.data,
 });
-
 doTest('test-in.png', 'test-out-fromsim-newmask.png', scale, {
-  threshold: 32, // won't perfectly match
-}, {
-  data: src_similarity.data,
+  threshold: 0,
+  similarity: src_similarity.data,
+  renderMode: 'similarityMask',
 });
+// note: doesn't work because color informs spline shapes
+// doTest('test-in-similarity.png', 'test-out-fromsim-newmask.png', scale, {
+//   threshold: 32, // won't perfectly match
+// });
 
 doTest('test-in.png', 'test-out-hard.png', scale, {
   threshold: 0,

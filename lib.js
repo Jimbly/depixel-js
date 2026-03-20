@@ -10,7 +10,7 @@ type Opts = {
   threshold?: number; // 0..255, lower = fewer similarity edges
   borderPx?: number; // pad input with this many pixels (1-2)
   similarity?: Buffer; // if specified uses values here instead or RGBA values to determine similarity - threshold (default 3) is used against sum of RGB differences
-  renderMode?: 'splines';
+  renderMode?: 'splines' | 'similarityMask' | 'default';
   doOpt?: boolean; // default true
 }
 
@@ -1931,7 +1931,13 @@ function runPipeline(src, outH, threshold, similarity, renderMode, doOpt) {
     corrected = computeCorrectedPositions(cell, cell.pos);
   }
 
-  const outData = gaussRasterize(src, sim3, cell, corrected, outWidth, outHeight, renderMode === 'splines');
+  const outData = gaussRasterize(
+    renderMode === 'similarityMask' ? {
+      ...src,
+      data: similarity,
+    } : src,
+    sim3, cell, corrected, outWidth, outHeight,
+    renderMode === 'splines');
   if (renderMode === 'splines') {
     renderSplines(outData, outWidth, outHeight, inW, inH, outData.allSplines);
   }
@@ -1953,6 +1959,9 @@ function scaleImage(src, opts) {
   const threshold = typeof opts.threshold === 'number' ? opts.threshold : (similarity ? 3 : 255);
   const renderMode = opts.renderMode;
   const doOpt = opts.doOpt ?? true;
+  if (renderMode === 'similarityMask' && !similarity) {
+    throw new Error('renderMode:similarityMask requires a similarity mask input');
+  }
 
   const borderPx = max(0, round(opts.borderPx || 0));
   if (borderPx > 0) {
