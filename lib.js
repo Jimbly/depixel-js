@@ -1213,7 +1213,7 @@ function optimizeCellGraph(cell, width, height) {
 
   for (let i = 0; i < count; i++) {
     const flags = cell.flags[i];
-    if (flags > 16 && flags < 512) {
+    if (flags & (HAS_NORTHERN_SPLINE|HAS_EASTERN_SPLINE|HAS_SOUTHERN_SPLINE|HAS_WESTERN_SPLINE)) {
       const base = i * 4;
       const neighbors = [cell.neighbors[base], cell.neighbors[base + 1], cell.neighbors[base + 2], cell.neighbors[base + 3]];
       const pos = getPosOpt(i);
@@ -1297,7 +1297,7 @@ function computeCorrectedPositions(cell, optimized) {
   corrected.set(optimized);
 
   function getPos(idx) {
-    return [cell.pos[idx * 2], cell.pos[idx * 2 + 1]];
+    return [optimized[idx * 2], optimized[idx * 2 + 1]];
   }
 
   function calcAdjustedPoint(p0, p1, p2) {

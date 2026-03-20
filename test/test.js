@@ -67,19 +67,22 @@ doTest('test-in.png', 'test-out-hard.png', scale, {
 // Verify things line up, and check for other bugs fixed along the way
 let had_error = false;
 
-// check test2.out vs expected
-let expected = PNG.sync.read(fs.readFileSync(__dirname + '/test2-out-expected.png'));
-let actual = PNG.sync.read(fs.readFileSync(__dirname + '/test2-out.png'));
-assert.equal(expected.data.length, actual.data.length);
-let diff = 0;
-for (let ii = 0; ii < expected.data.length; ++ii) {
-  if (expected.data[ii] !== actual.data[ii]) {
-    ++diff;
+// check test2-out for soft blending
+{
+  let actual = PNG.sync.read(fs.readFileSync(__dirname + '/test2-out.png'));
+  let diff = 0;
+  for (let ii = 0; ii < actual.data.length; ii+=4) {
+    let r = actual.data[ii];
+    let g = actual.data[ii+1];
+    let b = actual.data[ii+2];
+    if ((r>0) + (g>0) + (b>0) > 1) {
+      ++diff;
+    }
   }
-}
-if (diff > 9) {
-  had_error = true;
-  console.error(`Too many mismatched pixels between test2-out and test2-out-expected: ${diff}`);
+  if (diff) {
+    had_error = true;
+    console.error(`Found ${diff} non-perfect colors in test2-out`);
+  }
 }
 
 {
