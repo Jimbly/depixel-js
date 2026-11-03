@@ -63,6 +63,8 @@ const STEP = 0.2;
 const DIAGONAL_NODE_SHIFT = 0.25;
 // Same, but for a node belonging to a pixel with no similar neighbors (see getDiagonalShifts)
 const ISOLATED_NODE_SHIFT = 0.0;
+// Isolated pixels are only expanded if at least this many of their 8 neighbors are connected
+const ISOLATED_MIN_NEIGHBOR_GROUP = 5;
 const GAUSS_MULTIPLIER = 2.5;
 
 const POSITIONAL_ENERGY_SCALING = 2.5;
@@ -767,42 +769,116 @@ function computeCellGraph(src, sim) {
     return [0.125 * p0[0] + 0.75 * p1[0] + 0.125 * p2[0], 0.125 * p0[1] + 0.75 * p1[1] + 0.125 * p2[1]];
   }
 
-  function isIsolatedPixel(px, py) {
-    // A pixel with no remaining connections in the similarity graph (e.g. a single-pixel "eye")
-    return px >= 0 && py >= 0 && px < w && py < h && getSimR(px * 2 + 1, py * 2 + 1) === 0;
+  function isConnected(simX, simY) {
+    return getSimR(simX, simY) !== 0;
+  }
+
+  // Can the corner of the pixel in the given position (0=LL, 1=LR, 2=UL, 3=UR) of the block (cx,cy)
+  // be expanded out to the block center?  Only if the block has a diagonal connection between the
+  // two pixels adjacent to this corner, and the pixel opposite this one is also connected to both of
+  // them (the three other pixels are all connected, so the diagonal connection we'd be pinching is
+  // redundant).  If the diagonal connection is the only thing linking those pixels (e.g. along the
+  // edge of a thin diagonal line), expanding would cut into the line, causing stair-stepping.
+  function isCornerExpandable(cx, cy, position) {
+    if (cx < 0 || cy < 0 || cx >= w - 1 || cy >= h - 1) {
+      return false;
+    }
+    const simX = cx * 2 + 2;
+    const simY = cy * 2 + 2;
+    const diag = getSimR(simX, simY);
+    const north = isConnected(simX, simY + 1); // UL - UR
+    const east = isConnected(simX + 1, simY); // UR - LR
+    const south = isConnected(simX, simY - 1); // LL - LR
+    const west = isConnected(simX - 1, simY); // LL - UL
+    switch (position) {
+      case 0: // LL, opposite: UR
+        return diag === EDGE_DIAGONAL_ULLR && north && east;
+      case 3: // UR, opposite: LL
+        return diag === EDGE_DIAGONAL_ULLR && south && west;
+      case 2: // UL, opposite: LR
+        return diag === EDGE_DIAGONAL_LLUR && south && east;
+      case 1: // LR, opposite: UL
+        return diag === EDGE_DIAGONAL_LLUR && north && west;
+    }
+    return false;
+  }
+
+  // Offsets of the 8 neighbors of a pixel, and the matching similarity graph edge flags
+  const RING = [
+    [0, 1, NORTH], [1, 1, NORTHEAST], [1, 0, EAST], [1, -1, SOUTHEAST],
+    [0, -1, SOUTH], [-1, -1, SOUTHWEST], [-1, 0, WEST], [-1, 1, NORTHWEST],
+  ];
+  // Size of the largest group of connected pixels (connected directly to each other in the
+  // similarity graph) among the 8 neighbors of the given pixel
+  function largestNeighborGroup(px, py) {
+    const groupOf = [-1, -1, -1, -1, -1, -1, -1, -1];
+    let best = 0;
+    for (let ii = 0; ii < 8; ++ii) {
+      const nx = px + RING[ii][0];
+      const ny = py + RING[ii][1];
+      if (groupOf[ii] !== -1 || nx < 0 || ny < 0 || nx >= w || ny >= h) {
+        continue;
+      }
+      // flood fill within the ring
+      let size = 0;
+      const stack = [ii];
+      groupOf[ii] = ii;
+      while (stack.length) {
+        const jj = stack.pop();
+        size++;
+        const jx = px + RING[jj][0];
+        const jy = py + RING[jj][1];
+        const edges = sim.g[(jy * 2 + 1) * sim.w + jx * 2 + 1];
+        for (let kk = 0; kk < 8; ++kk) {
+          if (!(edges & RING[kk][2])) {
+            continue;
+          }
+          const kx = jx + RING[kk][0] - px;
+          const ky = jy + RING[kk][1] - py;
+          if (abs(kx) > 1 || abs(ky) > 1 || (!kx && !ky)) {
+            continue;
+          }
+          const idx = RING.findIndex((e) => e[0] === kx && e[1] === ky);
+          if (groupOf[idx] === -1) {
+            groupOf[idx] = ii;
+            stack.push(idx);
+          }
+        }
+      }
+      best = max(best, size);
+    }
+    return best;
+  }
+
+  // A pixel with no remaining connections in the similarity graph, mostly surrounded by a single
+  // connected region (e.g. a single-pixel "eye", or a "mouth" on the edge of a face).  Pixels on
+  // the edge between several regions are left alone, expanding them just creates odd bumps.
+  function isExpandablePixel(px, py) {
+    return px >= 0 && py >= 0 && px < w && py < h &&
+      getSimR(px * 2 + 1, py * 2 + 1) === 0 &&
+      largestNeighborGroup(px, py) >= ISOLATED_MIN_NEIGHBOR_GROUP;
   }
 
   // For a block (2x2 pixels) with a diagonal connection, returns how far (along each axis) the two
   // cell graph nodes are shifted from the block center towards the two pixels that are not part of
   // the diagonal connection: [shift for node 0, shift for node 1, node 0 expanded, node 1 expanded].
-  // Normally this is 1/4 pixel (the simplified Voronoi diagram from the paper), but if the pixel the
-  // node belongs to is completely isolated, its cell would end up as a tiny 1/2 x 1/2 pixel square,
-  // and the (approximating) B-spline fit to it encloses a dot only ~1/2 pixel in diameter.  Instead,
-  // place the node at the pixel corner, so the spline ends up roughly a circle inscribed in the
-  // original pixel (matching the results shown in the paper).
-  // This is only done if the other three pixels in the block are all connected to each other (e.g.
-  // an isolated pixel in the middle of a uniform region): then the diagonal connection we're
-  // pinching is redundant.  If the diagonal connection is the only thing linking those pixels (e.g.
-  // an isolated pixel along the edge of a thin diagonal line), expanding the pixel would cut into
-  // the line and cause harsh stair-stepping, so we keep the default.
+  // Normally this is 1/4 pixel (the simplified Voronoi diagram from the paper), but for an isolated
+  // pixel its cell would end up as a tiny 1/2 x 1/2 pixel square, and the (approximating) B-spline
+  // fit to it encloses a dot only ~1/2 pixel in diameter.  Instead, place the nodes at the pixel
+  // corners, so the spline ends up roughly a circle inscribed in the original pixel (matching the
+  // results shown in the paper).
   function getDiagonalShifts(cx, cy) {
-    const simX = cx * 2 + 2;
-    const simY = cy * 2 + 2;
-    const diag = getSimR(simX, simY);
-    const north = getSimR(simX, simY + 1) !== 0; // UL - UR connected
-    const east = getSimR(simX + 1, simY) !== 0; // UR - LR connected
-    const south = getSimR(simX, simY - 1) !== 0; // LL - LR connected
-    const west = getSimR(simX - 1, simY) !== 0; // LL - UL connected
+    const diag = getSimR(cx * 2 + 2, cy * 2 + 2);
     let exp0;
     let exp1;
     if (diag === EDGE_DIAGONAL_ULLR) {
-      // node 0 belongs to LL (opposite: UR), node 1 belongs to UR (opposite: LL)
-      exp0 = north && east && isIsolatedPixel(cx, cy);
-      exp1 = south && west && isIsolatedPixel(cx + 1, cy + 1);
+      // node 0 belongs to LL, node 1 belongs to UR
+      exp0 = isCornerExpandable(cx, cy, 0) && isExpandablePixel(cx, cy);
+      exp1 = isCornerExpandable(cx, cy, 3) && isExpandablePixel(cx + 1, cy + 1);
     } else if (diag === EDGE_DIAGONAL_LLUR) {
-      // node 0 belongs to UL (opposite: LR), node 1 belongs to LR (opposite: UL)
-      exp0 = south && east && isIsolatedPixel(cx, cy + 1);
-      exp1 = north && west && isIsolatedPixel(cx + 1, cy);
+      // node 0 belongs to UL, node 1 belongs to LR
+      exp0 = isCornerExpandable(cx, cy, 2) && isExpandablePixel(cx, cy + 1);
+      exp1 = isCornerExpandable(cx, cy, 1) && isExpandablePixel(cx + 1, cy);
     } else {
       return [DIAGONAL_NODE_SHIFT, DIAGONAL_NODE_SHIFT, false, false];
     }
