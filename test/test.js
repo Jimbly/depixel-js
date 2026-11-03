@@ -144,6 +144,28 @@ let had_error = false;
   checkNoBlack(102, 265, 99, 261);
 }
 
+// check isolated single pixels (the "eyes" in test3) end up roughly the size of a source pixel
+{
+  let dest = PNG.sync.read(fs.readFileSync(__dirname + '/test3-out.png'));
+  // eyes are source pixels (4,3) and (6,3), at 25x scale
+  for (let [ex, ey] of [[4, 3], [6, 3]]) {
+    let area = 0;
+    // look at a 2x2 source pixel window centered on the eye
+    for (let yy = Math.round((ey - 0.5) * 25); yy < Math.round((ey + 1.5) * 25); ++yy) {
+      for (let xx = Math.round((ex - 0.5) * 25); xx < Math.round((ex + 1.5) * 25); ++xx) {
+        if (dest.data[(yy * dest.width + xx) * 4] < 128) {
+          ++area;
+        }
+      }
+    }
+    // a circle inscribed in the source pixel would be ~490
+    if (area < 400 || area > 625) {
+      console.error(`Isolated pixel at ${ex},${ey} in test3-out has unexpected area ${area} (expected ~490)`);
+      had_error = true;
+    }
+  }
+}
+
 if (had_error) {
   throw new Error('Tests failed');
 } else {

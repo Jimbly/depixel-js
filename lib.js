@@ -59,6 +59,12 @@ const WEST = 2;
 const NORTHWEST = 1;
 
 const STEP = 0.2;
+// Distance (per axis) of cell graph nodes from the center of a 2x2 block with a diagonal connection
+const DIAGONAL_NODE_SHIFT = 0.25;
+// Same, but for a node belonging to a pixel with no similar neighbors (see getDiagonalShifts)
+const ISOLATED_NODE_SHIFT = 0.0;
+// Same, but when both pixels on either side of the diagonal connection are isolated
+const ISOLATED_PAIR_NODE_SHIFT = 0.125;
 const GAUSS_MULTIPLIER = 2.5;
 
 const POSITIONAL_ENERGY_SCALING = 2.5;
@@ -763,6 +769,42 @@ function computeCellGraph(src, sim) {
     return [0.125 * p0[0] + 0.75 * p1[0] + 0.125 * p2[0], 0.125 * p0[1] + 0.75 * p1[1] + 0.125 * p2[1]];
   }
 
+  function isIsolatedPixel(px, py) {
+    // A pixel with no remaining connections in the similarity graph (e.g. a single-pixel "eye")
+    return px >= 0 && py >= 0 && px < w && py < h && getSimR(px * 2 + 1, py * 2 + 1) === 0;
+  }
+
+  // For a block (2x2 pixels) with a diagonal connection, returns how far (along each axis) the two
+  // cell graph nodes are shifted from the block center towards the two pixels that are not part of
+  // the diagonal connection: [shift for node 0, shift for node 1, node 0 isolated, node 1 isolated].
+  // Normally this is 1/4 pixel (the simplified Voronoi diagram from the paper), but if the pixel the
+  // node belongs to is completely isolated, its cell would end up as a tiny 1/2 x 1/2 pixel square,
+  // and the (approximating) B-spline fit to it encloses a dot only ~1/2 pixel in diameter.  Instead,
+  // place the node at the pixel corner, so the spline ends up roughly a circle inscribed in the
+  // original pixel (matching the results shown in the paper).
+  function getDiagonalShifts(cx, cy) {
+    const diag = getSimR(cx * 2 + 2, cy * 2 + 2);
+    let iso0;
+    let iso1;
+    if (diag === EDGE_DIAGONAL_ULLR) {
+      iso0 = isIsolatedPixel(cx, cy);
+      iso1 = isIsolatedPixel(cx + 1, cy + 1);
+    } else if (diag === EDGE_DIAGONAL_LLUR) {
+      iso0 = isIsolatedPixel(cx, cy + 1);
+      iso1 = isIsolatedPixel(cx + 1, cy);
+    } else {
+      return [DIAGONAL_NODE_SHIFT, DIAGONAL_NODE_SHIFT, false, false];
+    }
+    if (iso0 && iso1) {
+      return [ISOLATED_PAIR_NODE_SHIFT, ISOLATED_PAIR_NODE_SHIFT, true, true];
+    }
+    return [
+      iso0 ? ISOLATED_NODE_SHIFT : DIAGONAL_NODE_SHIFT,
+      iso1 ? ISOLATED_NODE_SHIFT : DIAGONAL_NODE_SHIFT,
+      iso0, iso1,
+    ];
+  }
+
   function checkForCorner(s1, s2) {
     const n1 = hypot(s1[0], s1[1]);
     const n2 = hypot(s2[0], s2[1]);
@@ -842,10 +884,12 @@ function computeCellGraph(src, sim) {
         neighborCount++;
         if (eNorthCenter === EDGE_DIAGONAL_ULLR) {
           nNeighborIndex = getNeighborIndex(cx, cy, 'N', 0);
-          nVector = [-0.25, 0.75];
+          const sh = getDiagonalShifts(cx, cy + 1)[0];
+          nVector = [-sh, 1 - sh];
         } else if (eNorthCenter === EDGE_DIAGONAL_LLUR) {
           nNeighborIndex = getNeighborIndex(cx, cy, 'N', 1);
-          nVector = [0.25, 0.75];
+          const sh = getDiagonalShifts(cx, cy + 1)[1];
+          nVector = [sh, 1 - sh];
         } else {
           nNeighborIndex = getNeighborIndex(cx, cy, 'N', 0);
           nVector = [0.0, 1.0];
@@ -857,10 +901,12 @@ function computeCellGraph(src, sim) {
         neighborCount++;
         if (eWestCenter === EDGE_DIAGONAL_ULLR) {
           wNeighborIndex = getNeighborIndex(cx, cy, 'W', 1);
-          wVector = [-0.75, 0.25];
+          const sh = getDiagonalShifts(cx - 1, cy)[1];
+          wVector = [-1 + sh, sh];
         } else if (eWestCenter === EDGE_DIAGONAL_LLUR) {
           wNeighborIndex = getNeighborIndex(cx, cy, 'W', 1);
-          wVector = [-0.75, -0.25];
+          const sh = getDiagonalShifts(cx - 1, cy)[1];
+          wVector = [-1 + sh, -sh];
         } else {
           wNeighborIndex = getNeighborIndex(cx, cy, 'W', 0);
           wVector = [-1.0, 0.0];
@@ -872,10 +918,12 @@ function computeCellGraph(src, sim) {
         neighborCount++;
         if (eSouthCenter === EDGE_DIAGONAL_ULLR) {
           sNeighborIndex = getNeighborIndex(cx, cy, 'S', 1);
-          sVector = [0.25, -0.75];
+          const sh = getDiagonalShifts(cx, cy - 1)[1];
+          sVector = [sh, -1 + sh];
         } else if (eSouthCenter === EDGE_DIAGONAL_LLUR) {
           sNeighborIndex = getNeighborIndex(cx, cy, 'S', 0);
-          sVector = [-0.25, -0.75];
+          const sh = getDiagonalShifts(cx, cy - 1)[0];
+          sVector = [-sh, -1 + sh];
         } else {
           sNeighborIndex = getNeighborIndex(cx, cy, 'S', 0);
           sVector = [0.0, -1.0];
@@ -887,10 +935,12 @@ function computeCellGraph(src, sim) {
         neighborCount++;
         if (eEastCenter === EDGE_DIAGONAL_ULLR) {
           eNeighborIndex = getNeighborIndex(cx, cy, 'E', 0);
-          eVector = [0.75, -0.25];
+          const sh = getDiagonalShifts(cx + 1, cy)[0];
+          eVector = [1 - sh, -sh];
         } else if (eEastCenter === EDGE_DIAGONAL_LLUR) {
           eNeighborIndex = getNeighborIndex(cx, cy, 'E', 0);
-          eVector = [0.75, 0.25];
+          const sh = getDiagonalShifts(cx + 1, cy)[0];
+          eVector = [1 - sh, sh];
         } else {
           eNeighborIndex = getNeighborIndex(cx, cy, 'E', 0);
           eVector = [1.0, 0.0];
@@ -904,10 +954,13 @@ function computeCellGraph(src, sim) {
         const URPixelColorIndex = [cx + 1, cy + 1];
 
         const centerPos = [cx + 0.5, cy + 0.5];
+        // Note: the outline of an isolated pixel is already as smooth as it can get, there is no
+        //   staircasing to remove, so do not let the optimization distort it.
+        const [sh0, sh1, iso0, iso1] = getDiagonalShifts(cx, cy);
 
         if (eCenter === EDGE_DIAGONAL_ULLR) {
           let twoNeighbors = true;
-          v0_pos = [centerPos[0] - 0.25, centerPos[1] - 0.25];
+          v0_pos = [centerPos[0] - sh0, centerPos[1] - sh0];
           let sIndex = sNeighborIndex;
           let wIndex = wNeighborIndex;
           if (sNeighborsFound) {
@@ -921,14 +974,14 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (checkForCorner([sVector[0] + 0.25, sVector[1] + 0.25], [wVector[0] + 0.25, wVector[1] + 0.25])) {
+            if (iso0 || checkForCorner([sVector[0] + sh0, sVector[1] + sh0], [wVector[0] + sh0, wVector[1] + sh0])) {
               v0_flags |= DONT_OPTIMIZE_S | DONT_OPTIMIZE_W;
             }
           }
           v0_neighbors = [-1, -1, sIndex, wIndex];
 
           twoNeighbors = true;
-          v1_pos = [centerPos[0] + 0.25, centerPos[1] + 0.25];
+          v1_pos = [centerPos[0] + sh1, centerPos[1] + sh1];
           let nIndex = nNeighborIndex;
           let eIndex = eNeighborIndex;
           if (nNeighborsFound) {
@@ -942,14 +995,14 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (checkForCorner([nVector[0] - 0.25, nVector[1] - 0.25], [eVector[0] - 0.25, eVector[1] - 0.25])) {
+            if (iso1 || checkForCorner([nVector[0] - sh1, nVector[1] - sh1], [eVector[0] - sh1, eVector[1] - sh1])) {
               v1_flags |= DONT_OPTIMIZE_N | DONT_OPTIMIZE_E;
             }
           }
           v1_neighbors = [nIndex, eIndex, -1, -1];
         } else if (eCenter === EDGE_DIAGONAL_LLUR) {
           let twoNeighbors = true;
-          v0_pos = [centerPos[0] - 0.25, centerPos[1] + 0.25];
+          v0_pos = [centerPos[0] - sh0, centerPos[1] + sh0];
           let nIndex = nNeighborIndex;
           let wIndex = wNeighborIndex;
           if (nNeighborsFound) {
@@ -963,14 +1016,14 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (checkForCorner([nVector[0] + 0.25, nVector[1] - 0.25], [wVector[0] + 0.25, wVector[1] - 0.25])) {
+            if (iso0 || checkForCorner([nVector[0] + sh0, nVector[1] - sh0], [wVector[0] + sh0, wVector[1] - sh0])) {
               v0_flags |= DONT_OPTIMIZE_N | DONT_OPTIMIZE_W;
             }
           }
           v0_neighbors = [nIndex, -1, -1, wIndex];
 
           twoNeighbors = true;
-          v1_pos = [centerPos[0] + 0.25, centerPos[1] - 0.25];
+          v1_pos = [centerPos[0] + sh1, centerPos[1] - sh1];
           let sIndex = sNeighborIndex;
           let eIndex = eNeighborIndex;
           if (sNeighborsFound) {
@@ -984,7 +1037,7 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (checkForCorner([sVector[0] - 0.25, sVector[1] + 0.25], [eVector[0] - 0.25, eVector[1] + 0.25])) {
+            if (iso1 || checkForCorner([sVector[0] - sh1, sVector[1] + sh1], [eVector[0] - sh1, eVector[1] + sh1])) {
               v1_flags |= DONT_OPTIMIZE_S | DONT_OPTIMIZE_E;
             }
           }
