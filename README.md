@@ -11,6 +11,8 @@ Improvements upon original GPU version:
 * Add a threshold parameter to adjust how close two colors need to be to be consider similar
 * Better handle alpha channels (treat as dissimilar from non-transparent pixels)
 * Fix stretching/scaling due to texel misalignment
+* Smoother blending between similar colors (fixes blocky artifacts in gradients), configurable via `blendSigma`
+* Single isolated pixels (e.g. eyes) no longer shrink to tiny dots
 * Add option to pass in a similarity map
   * Relatedly, `outputSimilarityMask` outputs a scaled up similarity map (for use in post-processing, etc)
 
@@ -48,6 +50,10 @@ type Opts = {
   outputSimilarityMask?: boolean; // default false
   renderMode?: 'splines' | 'default'; // default default
   doOpt?: boolean; // default true
+  // standard deviation (in source pixels) of the Gaussian used to blend colors
+  //   of similar pixels; larger = smoother gradients; the original GPU
+  //   version used ~0.45, which leaves blocky artifacts in gradients
+  blendSigma?: number; // default 0.7
 }
 
 function scaleImage(src: Image, opts: Opts): Image;

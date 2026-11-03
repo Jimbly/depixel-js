@@ -14,6 +14,7 @@ type Opts = {
   outputSimilarityMask?: boolean; // if this and similarity are specified, return similarityData
   renderMode?: 'splines' |  'default';
   doOpt?: boolean; // default true
+  blendSigma?: number; // width (in source pixels) of color blending between similar pixels; default 0.7
 }
 
 function scaleImage(src: Image, opts: Opts): Image;
@@ -29,6 +30,7 @@ const {
   min,
   round,
   sign,
+  sqrt,
 } = Math;
 
 const EDGE_HORVERT = 16;
@@ -58,6 +60,12 @@ const SOUTHWEST = 4;
 const WEST = 2;
 const NORTHWEST = 1;
 
+// Offsets of the 8 neighbors of a pixel, and the matching similarity graph edge flags
+const RING_DIRS = [
+  [0, 1, NORTH], [1, 1, NORTHEAST], [1, 0, EAST], [1, -1, SOUTHEAST],
+  [0, -1, SOUTH], [-1, -1, SOUTHWEST], [-1, 0, WEST], [-1, 1, NORTHWEST],
+];
+
 const STEP = 0.2;
 // Distance (per axis) of cell graph nodes from the center of a 2x2 block with a diagonal connection
 const DIAGONAL_NODE_SHIFT = 0.25;
@@ -65,7 +73,11 @@ const DIAGONAL_NODE_SHIFT = 0.25;
 const ISOLATED_NODE_SHIFT = 0.0;
 // Isolated pixels are only expanded if at least this many of their 8 neighbors are connected
 const ISOLATED_MIN_NEIGHBOR_GROUP = 5;
-const GAUSS_MULTIPLIER = 2.5;
+// Default standard deviation (in source pixels) of the Gaussian used to blend colors of similar
+// pixels.  The original GPU version used exp(-2.5 * dist^2), (sigma ~0.45), which is so narrow that
+// gradients between similar colors still show the blocky shape of the source pixels; a wider kernel
+// gives smooth gradients much closer to the results in the paper.
+const DEFAULT_BLEND_SIGMA = 0.7;
 
 const POSITIONAL_ENERGY_SCALING = 2.5;
 
@@ -803,11 +815,7 @@ function computeCellGraph(src, sim) {
     return false;
   }
 
-  // Offsets of the 8 neighbors of a pixel, and the matching similarity graph edge flags
-  const RING = [
-    [0, 1, NORTH], [1, 1, NORTHEAST], [1, 0, EAST], [1, -1, SOUTHEAST],
-    [0, -1, SOUTH], [-1, -1, SOUTHWEST], [-1, 0, WEST], [-1, 1, NORTHWEST],
-  ];
+  const RING = RING_DIRS;
   // Size of the largest group of connected pixels (connected directly to each other in the
   // similarity graph) among the 8 neighbors of the given pixel
   function largestNeighborGroup(px, py) {
@@ -1479,7 +1487,7 @@ function computeCorrectedPositions(cell, optimized) {
   return corrected;
 }
 
-function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outputSimilarityMask, similarity) {
+function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outputSimilarityMask, similarity, blendSigma) {
   const w = src.width;
   const h = src.height;
   const out = Buffer.alloc(outW * outH * 4);
@@ -1612,6 +1620,17 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outp
     return cpArray;
   }
 
+  // Gaussian weights are exp(-dist^2 / (2 * blendSigma^2)) = exp(-dist^2 * gaussMultiplier).
+  // Pixels are gathered from a window extending `margin` pixels beyond the 2x2 pixels surrounding the fragment, so the nearest excluded pixel is
+  // at least margin+1 away; choose it so that pixel's weight is negligible (< e^-7), avoiding seams
+  // where pixels enter/leave the window.
+  const gaussMultiplier = 1 / (2 * blendSigma * blendSigma);
+  const margin = max(1, ceil(sqrt(7 / gaussMultiplier)) - 1);
+  const winSize = 2 + 2 * margin;
+  const visitedStamp = new Int32Array(winSize * winSize);
+  let stamp = 0;
+  const bfsStack = new Int32Array(winSize * winSize * 2);
+
   const allSplines = needSplines ? [] : null;
   const allSplinesDone = {};
   let similarityData;
@@ -1623,6 +1642,84 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outp
       data: similarity,
     };
   }
+
+  // Edge-aware RBF interpolation: starting from the nearest pixels that are not hidden behind a
+  // spline, gather every pixel in the surrounding window that is reachable through the similarity
+  // graph (without leaving the window), so that each can be weighted exactly once.  (The original
+  // GPU version instead added a fixed subset of each nearest pixel's neighbors, which skipped some
+  // and double-counted others depending on which pixel center lines the fragment was between,
+  // causing rectangular artifacts in smooth gradients.)
+  // Returns a flat array of [x0, y0, dataIndex0, x1, y1, dataIndex1, ...] for each source pixel.
+  const reachableCache = new Map();
+  function findReachable(winX, winY, seedMask, ULCoords, URCoords, LLCoords, LRCoords) {
+    ++stamp;
+    let stackLen = 0;
+    const result = [];
+    function seed(coords) {
+      const idx = (coords[1] - winY) * winSize + coords[0] - winX;
+      if (visitedStamp[idx] !== stamp) {
+        visitedStamp[idx] = stamp;
+        bfsStack[stackLen++] = coords[0];
+        bfsStack[stackLen++] = coords[1];
+      }
+    }
+    if (seedMask & 1) {
+      seed(ULCoords);
+    }
+    if (seedMask & 2) {
+      seed(URCoords);
+    }
+    if (seedMask & 4) {
+      seed(LLCoords);
+    }
+    if (seedMask & 8) {
+      seed(LRCoords);
+    }
+    while (stackLen) {
+      const py = bfsStack[--stackLen];
+      const px = bfsStack[--stackLen];
+      // note: seeds along the right/bottom edge may be just outside of the image, use the edge pixel
+      result.push(px, py, (clampInt(py, 0, h - 1) * w + clampInt(px, 0, w - 1)) * 4);
+      const edges = getG(2 * px + 1, 2 * py + 1);
+      for (let ii = 0; ii < 8; ++ii) {
+        const dir = RING_DIRS[ii];
+        if (!(edges & dir[2])) {
+          continue;
+        }
+        const lx = px + dir[0] - winX;
+        const ly = py + dir[1] - winY;
+        if (lx < 0 || ly < 0 || lx >= winSize || ly >= winSize) {
+          continue;
+        }
+        const idx = ly * winSize + lx;
+        if (visitedStamp[idx] !== stamp) {
+          visitedStamp[idx] = stamp;
+          bfsStack[stackLen++] = px + dir[0];
+          bfsStack[stackLen++] = py + dir[1];
+        }
+      }
+    }
+    return result;
+  }
+
+  // The Gaussian is separable, so precompute the per-column and per-row weights for each output
+  // column/row: weight = colWeights[ox][lx] * rowWeights[oy][ly], where lx/ly are relative to the
+  // window (which starts `margin` pixels before floor(cellSpaceCoords)).
+  function buildWeights(outSize, inSize) {
+    const weights = new Float64Array(outSize * winSize);
+    for (let o = 0; o < outSize; o++) {
+      const c = (inSize * (o + 0.5) / outSize) - 0.5 + 0.00001;
+      const start = floor(c) - margin;
+      for (let ii = 0; ii < winSize; ii++) {
+        const d = c - (start + ii);
+        weights[o * winSize + ii] = exp(-d * d * gaussMultiplier);
+      }
+    }
+    return weights;
+  }
+  const colWeights = buildWeights(outW, w);
+  const rowWeights = buildWeights(outH, h);
+  const srcData = src.data;
 
   for (let oy = 0; oy < outH; oy++) {
     for (let ox = 0; ox < outW; ox++) {
@@ -1886,21 +1983,24 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outp
         }
       }
 
-      let colorSum = [0, 0, 0, 0];
+      let colorSum0 = 0;
+      let colorSum1 = 0;
+      let colorSum2 = 0;
+      let colorSum3 = 0;
       let weightSum = 0.0;
       let maxWeight = 0;
       let maxSimilarity = null;
 
-      function addWeightedColor(px, py) {
-        const col = fetchPixelRGBA8(src, px, py);
-        const dx = cellSpaceCoords[0] - px;
-        const dy = cellSpaceCoords[1] - py;
-        const distSq = dx * dx + dy * dy;
-        const weight = exp(-distSq * GAUSS_MULTIPLIER);
-        colorSum[0] += col[0] * weight;
-        colorSum[1] += col[1] * weight;
-        colorSum[2] += col[2] * weight;
-        colorSum[3] += col[3] * weight;
+      const winX = LLCoords[0] - margin;
+      const winY = LLCoords[1] - margin;
+      const colWeightBase = ox * winSize - winX;
+      const rowWeightBase = oy * winSize - winY;
+      function addWeightedColor(px, py, idx) {
+        const weight = colWeights[colWeightBase + px] * rowWeights[rowWeightBase + py];
+        colorSum0 += srcData[idx] * weight;
+        colorSum1 += srcData[idx + 1] * weight;
+        colorSum2 += srcData[idx + 2] * weight;
+        colorSum3 += srcData[idx + 3] * weight;
         weightSum += weight;
         if (outputSimilarityMask && weight >= maxWeight) {
           // note: would also be reasonable to blend this like we blend the colors
@@ -1909,74 +2009,25 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outp
         }
       }
 
-      if (influencingPixels[0]) {
-        addWeightedColor(ULCoords[0], ULCoords[1]);
-        const edges = getG(2 * ULCoords[0] + 1, 2 * ULCoords[1] + 1);
-        if (edges & SOUTHWEST) {
-          addWeightedColor(ULCoords[0] - 1, ULCoords[1] - 1);
+      // Edge-aware RBF interpolation: starting from the nearest pixels that are not hidden behind a
+      // spline, gather every pixel in the surrounding window that is reachable through the
+      // similarity graph (without leaving the window), and weight each exactly once.  (The original
+      // GPU version instead added a fixed subset of each nearest pixel's neighbors, which skipped
+      // some and double-counted others depending on which pixel center lines the fragment was
+      // between, causing rectangular artifacts in smooth gradients.)
+      const seedMask = (influencingPixels[0] ? 1 : 0) | (influencingPixels[1] ? 2 : 0) |
+        (influencingPixels[2] ? 4 : 0) | (influencingPixels[3] ? 8 : 0);
+      if (seedMask) {
+        // The set of reachable pixels only depends on the window position and which of the nearest
+        // pixels are visible, so it is shared by most fragments within the same source cell
+        const cacheKey = (((LLCoords[1] + 1) * (w + 2) + LLCoords[0] + 1) << 4) | seedMask;
+        let reachable = reachableCache.get(cacheKey);
+        if (!reachable) {
+          reachable = findReachable(winX, winY, seedMask, ULCoords, URCoords, LLCoords, LRCoords);
+          reachableCache.set(cacheKey, reachable);
         }
-        if (edges & WEST) {
-          addWeightedColor(ULCoords[0] - 1, ULCoords[1]);
-        }
-        if (edges & NORTHWEST) {
-          addWeightedColor(ULCoords[0] - 1, ULCoords[1] + 1);
-        }
-        if (edges & NORTH) {
-          addWeightedColor(ULCoords[0], ULCoords[1] + 1);
-        }
-        if (edges & NORTHEAST) {
-          addWeightedColor(ULCoords[0] + 1, ULCoords[1] + 1);
-        }
-      }
-      if (influencingPixels[1]) {
-        addWeightedColor(URCoords[0], URCoords[1]);
-        const edges = getG(2 * URCoords[0] + 1, 2 * URCoords[1] + 1);
-        if (edges & NORTH) {
-          addWeightedColor(URCoords[0], URCoords[1] + 1);
-        }
-        if (edges & NORTHEAST) {
-          addWeightedColor(URCoords[0] + 1, URCoords[1] + 1);
-        }
-        if (edges & EAST) {
-          addWeightedColor(URCoords[0] + 1, URCoords[1]);
-        }
-        if (edges & SOUTHEAST) {
-          addWeightedColor(URCoords[0] + 1, URCoords[1] - 1);
-        }
-      }
-      if (influencingPixels[2]) {
-        addWeightedColor(LLCoords[0], LLCoords[1]);
-        const edges = getG(2 * LLCoords[0] + 1, 2 * LLCoords[1] + 1);
-        if (edges & WEST) {
-          addWeightedColor(LLCoords[0] - 1, LLCoords[1]);
-        }
-        if (edges & SOUTHWEST) {
-          addWeightedColor(LLCoords[0] - 1, LLCoords[1] - 1);
-        }
-        if (edges & SOUTH) {
-          addWeightedColor(LLCoords[0], LLCoords[1] - 1);
-        }
-        if (edges & SOUTHEAST) {
-          addWeightedColor(LLCoords[0] + 1, LLCoords[1] - 1);
-        }
-      }
-      if (influencingPixels[3]) {
-        addWeightedColor(LRCoords[0], LRCoords[1]);
-        const edges = getG(2 * LRCoords[0] + 1, 2 * LRCoords[1] + 1);
-        if (edges & NORTHEAST) {
-          addWeightedColor(LRCoords[0] + 1, LRCoords[1] + 1);
-        }
-        if (edges & EAST) {
-          addWeightedColor(LRCoords[0] + 1, LRCoords[1]);
-        }
-        if (edges & SOUTHWEST) {
-          addWeightedColor(LRCoords[0] - 1, LRCoords[1] - 1);
-        }
-        if (edges & SOUTH) {
-          addWeightedColor(LRCoords[0], LRCoords[1] - 1);
-        }
-        if (edges & SOUTHEAST) {
-          addWeightedColor(LRCoords[0] + 1, LRCoords[1] - 1);
+        for (let ii = 0; ii < reachable.length; ii += 3) {
+          addWeightedColor(reachable[ii], reachable[ii + 1], reachable[ii + 2]);
         }
       }
 
@@ -1993,10 +2044,10 @@ function gaussRasterize(src, sim, cell, positions, outW, outH, needSplines, outp
           maxSimilarity = fetchPixelRGBA8(simImage, nx, ny);
         }
       } else {
-        out[outIdx] = clampInt(round((colorSum[0] / weightSum)), 0, 255);
-        out[outIdx + 1] = clampInt(round((colorSum[1] / weightSum)), 0, 255);
-        out[outIdx + 2] = clampInt(round((colorSum[2] / weightSum)), 0, 255);
-        out[outIdx + 3] = clampInt(round((colorSum[3] / weightSum)), 0, 255);
+        out[outIdx] = clampInt(round((colorSum0 / weightSum)), 0, 255);
+        out[outIdx + 1] = clampInt(round((colorSum1 / weightSum)), 0, 255);
+        out[outIdx + 2] = clampInt(round((colorSum2 / weightSum)), 0, 255);
+        out[outIdx + 3] = clampInt(round((colorSum3 / weightSum)), 0, 255);
       }
       if (outputSimilarityMask) {
         similarityData[outIdx] = maxSimilarity[0];
@@ -2078,7 +2129,7 @@ function renderSplines(out, outW, outH, inW, inH, allSplines) {
   }
 }
 
-function runPipeline(src, outH, threshold, similarity, renderMode, doOpt, outputSimilarityMask) {
+function runPipeline(src, outH, threshold, similarity, renderMode, doOpt, outputSimilarityMask, blendSigma) {
   const inW = src.width | 0;
   const inH = src.height | 0;
   const outHeight = outH | 0;
@@ -2104,7 +2155,7 @@ function runPipeline(src, outH, threshold, similarity, renderMode, doOpt, output
     src,
     sim3, cell, corrected, outWidth, outHeight,
     renderMode === 'splines',
-    outputSimilarityMask, similarity);
+    outputSimilarityMask, similarity, blendSigma);
   if (renderMode === 'splines') {
     renderSplines(out.data, outWidth, outHeight, inW, inH, out.allSplines);
   }
@@ -2127,6 +2178,10 @@ function scaleImage(src, opts) {
   const renderMode = opts.renderMode || 'default';
   const outputSimilarityMask = opts.outputSimilarityMask || false;
   const doOpt = opts.doOpt ?? true;
+  const blendSigma = opts.blendSigma ?? DEFAULT_BLEND_SIGMA;
+  if (!(blendSigma > 0)) {
+    throw new Error('opts.blendSigma must be a positive number');
+  }
   if (outputSimilarityMask && !similarity) {
     throw new Error('outputSimilarityMask requires a similarity mask input');
   }
@@ -2156,7 +2211,7 @@ function scaleImage(src, opts) {
     }
     const scale = outH / inH;
     const outHpad = max(1, round(padH * scale));
-    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, padSimilarity, renderMode, doOpt, outputSimilarityMask);
+    const padded = runPipeline({ data: padData, width: padW, height: padH }, outHpad, threshold, padSimilarity, renderMode, doOpt, outputSimilarityMask, blendSigma);
 
     const padOut = max(0, round(borderPx * scale));
     const outW = max(1, round((inW / inH) * outH));
@@ -2186,7 +2241,7 @@ function scaleImage(src, opts) {
     };
   }
 
-  const result = runPipeline(src, outH, threshold, similarity, renderMode, doOpt, outputSimilarityMask);
+  const result = runPipeline(src, outH, threshold, similarity, renderMode, doOpt, outputSimilarityMask, blendSigma);
   return {
     data: result.data,
     width: result.width,
