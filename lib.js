@@ -63,8 +63,6 @@ const STEP = 0.2;
 const DIAGONAL_NODE_SHIFT = 0.25;
 // Same, but for a node belonging to a pixel with no similar neighbors (see getDiagonalShifts)
 const ISOLATED_NODE_SHIFT = 0.0;
-// Same, but when both pixels on either side of the diagonal connection are isolated
-const ISOLATED_PAIR_NODE_SHIFT = 0.125;
 const GAUSS_MULTIPLIER = 2.5;
 
 const POSITIONAL_ENERGY_SCALING = 2.5;
@@ -776,32 +774,42 @@ function computeCellGraph(src, sim) {
 
   // For a block (2x2 pixels) with a diagonal connection, returns how far (along each axis) the two
   // cell graph nodes are shifted from the block center towards the two pixels that are not part of
-  // the diagonal connection: [shift for node 0, shift for node 1, node 0 isolated, node 1 isolated].
+  // the diagonal connection: [shift for node 0, shift for node 1, node 0 expanded, node 1 expanded].
   // Normally this is 1/4 pixel (the simplified Voronoi diagram from the paper), but if the pixel the
   // node belongs to is completely isolated, its cell would end up as a tiny 1/2 x 1/2 pixel square,
   // and the (approximating) B-spline fit to it encloses a dot only ~1/2 pixel in diameter.  Instead,
   // place the node at the pixel corner, so the spline ends up roughly a circle inscribed in the
   // original pixel (matching the results shown in the paper).
+  // This is only done if the other three pixels in the block are all connected to each other (e.g.
+  // an isolated pixel in the middle of a uniform region): then the diagonal connection we're
+  // pinching is redundant.  If the diagonal connection is the only thing linking those pixels (e.g.
+  // an isolated pixel along the edge of a thin diagonal line), expanding the pixel would cut into
+  // the line and cause harsh stair-stepping, so we keep the default.
   function getDiagonalShifts(cx, cy) {
-    const diag = getSimR(cx * 2 + 2, cy * 2 + 2);
-    let iso0;
-    let iso1;
+    const simX = cx * 2 + 2;
+    const simY = cy * 2 + 2;
+    const diag = getSimR(simX, simY);
+    const north = getSimR(simX, simY + 1) !== 0; // UL - UR connected
+    const east = getSimR(simX + 1, simY) !== 0; // UR - LR connected
+    const south = getSimR(simX, simY - 1) !== 0; // LL - LR connected
+    const west = getSimR(simX - 1, simY) !== 0; // LL - UL connected
+    let exp0;
+    let exp1;
     if (diag === EDGE_DIAGONAL_ULLR) {
-      iso0 = isIsolatedPixel(cx, cy);
-      iso1 = isIsolatedPixel(cx + 1, cy + 1);
+      // node 0 belongs to LL (opposite: UR), node 1 belongs to UR (opposite: LL)
+      exp0 = north && east && isIsolatedPixel(cx, cy);
+      exp1 = south && west && isIsolatedPixel(cx + 1, cy + 1);
     } else if (diag === EDGE_DIAGONAL_LLUR) {
-      iso0 = isIsolatedPixel(cx, cy + 1);
-      iso1 = isIsolatedPixel(cx + 1, cy);
+      // node 0 belongs to UL (opposite: LR), node 1 belongs to LR (opposite: UL)
+      exp0 = south && east && isIsolatedPixel(cx, cy + 1);
+      exp1 = north && west && isIsolatedPixel(cx + 1, cy);
     } else {
       return [DIAGONAL_NODE_SHIFT, DIAGONAL_NODE_SHIFT, false, false];
     }
-    if (iso0 && iso1) {
-      return [ISOLATED_PAIR_NODE_SHIFT, ISOLATED_PAIR_NODE_SHIFT, true, true];
-    }
     return [
-      iso0 ? ISOLATED_NODE_SHIFT : DIAGONAL_NODE_SHIFT,
-      iso1 ? ISOLATED_NODE_SHIFT : DIAGONAL_NODE_SHIFT,
-      iso0, iso1,
+      exp0 ? ISOLATED_NODE_SHIFT : DIAGONAL_NODE_SHIFT,
+      exp1 ? ISOLATED_NODE_SHIFT : DIAGONAL_NODE_SHIFT,
+      exp0, exp1,
     ];
   }
 
@@ -956,7 +964,7 @@ function computeCellGraph(src, sim) {
         const centerPos = [cx + 0.5, cy + 0.5];
         // Note: the outline of an isolated pixel is already as smooth as it can get, there is no
         //   staircasing to remove, so do not let the optimization distort it.
-        const [sh0, sh1, iso0, iso1] = getDiagonalShifts(cx, cy);
+        const [sh0, sh1, exp0, exp1] = getDiagonalShifts(cx, cy);
 
         if (eCenter === EDGE_DIAGONAL_ULLR) {
           let twoNeighbors = true;
@@ -974,7 +982,7 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (iso0 || checkForCorner([sVector[0] + sh0, sVector[1] + sh0], [wVector[0] + sh0, wVector[1] + sh0])) {
+            if (exp0 || checkForCorner([sVector[0] + sh0, sVector[1] + sh0], [wVector[0] + sh0, wVector[1] + sh0])) {
               v0_flags |= DONT_OPTIMIZE_S | DONT_OPTIMIZE_W;
             }
           }
@@ -995,7 +1003,7 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (iso1 || checkForCorner([nVector[0] - sh1, nVector[1] - sh1], [eVector[0] - sh1, eVector[1] - sh1])) {
+            if (exp1 || checkForCorner([nVector[0] - sh1, nVector[1] - sh1], [eVector[0] - sh1, eVector[1] - sh1])) {
               v1_flags |= DONT_OPTIMIZE_N | DONT_OPTIMIZE_E;
             }
           }
@@ -1016,7 +1024,7 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (iso0 || checkForCorner([nVector[0] + sh0, nVector[1] - sh0], [wVector[0] + sh0, wVector[1] - sh0])) {
+            if (exp0 || checkForCorner([nVector[0] + sh0, nVector[1] - sh0], [wVector[0] + sh0, wVector[1] - sh0])) {
               v0_flags |= DONT_OPTIMIZE_N | DONT_OPTIMIZE_W;
             }
           }
@@ -1037,7 +1045,7 @@ function computeCellGraph(src, sim) {
             twoNeighbors = false;
           }
           if (twoNeighbors) {
-            if (iso1 || checkForCorner([sVector[0] - sh1, sVector[1] + sh1], [eVector[0] - sh1, eVector[1] + sh1])) {
+            if (exp1 || checkForCorner([sVector[0] - sh1, sVector[1] + sh1], [eVector[0] - sh1, eVector[1] + sh1])) {
               v1_flags |= DONT_OPTIMIZE_S | DONT_OPTIMIZE_E;
             }
           }
