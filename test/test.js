@@ -75,6 +75,32 @@ doTest('test-in.png', 'test-out-hard.png', scale, {
 });
 
 //////////////////////////////////////////////////////////////////////////
+// Make bilinear filtered version for README
+doTest('test-in.png', 'test-temp-12x.png', 12, {
+  borderPx: 2,
+});
+{
+  let src = PNG.sync.read(fs.readFileSync(__dirname + '/test-temp-12x.png'));
+  fs.unlinkSync(__dirname + '/test-temp-12x.png');
+  let dst = new PNG({ width: src.width/2, height: src.height/2, colorType: PNG_RGBA });
+  for (let yy = 0; yy < dst.height; ++yy) {
+    for (let xx = 0; xx < dst.width; ++xx) {
+      for (let kk = 0; kk < 4; ++kk) {
+        let v = 0;
+        for (let ii = 0; ii < 2; ++ii) {
+          for (let jj = 0; jj < 2; ++jj) {
+            v += src.data[(xx * 2 + ii + (yy * 2 + jj) * src.width) * 4 + kk];
+          }
+        }
+        dst.data[(xx + yy * dst.width) * 4 + kk] = Math.round(v / 4);
+      }
+    }
+  }
+  fs.writeFileSync(__dirname + '/test-out-6x-bilinear.png', PNG.sync.write(dst));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
 // Verify things line up, and check for other bugs fixed along the way
 let had_error = false;
 
