@@ -32,6 +32,10 @@ let scale = 6;
 
 doTest('test-in.png', 'test-out.png', scale);
 
+doTest('test3-in.png', 'test3-out.png', 25, {
+  borderPx: 2,
+});
+
 doTest('test2-in.png', 'test2-out-noopt.png', 25, {
   threshold: 0,
   borderPx: 2,
