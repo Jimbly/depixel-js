@@ -15,7 +15,8 @@
     "url": "git+https://github.com/Jimbly/npm-publish.git"
   },
   "scripts": {
-    "test": "cd test && node test.js"
+    "test": "cd test && node test.js",
+    "work": "cd test && npx nodemon -w work.png -w work-similarity.png -w work.js -- work.js"
   },
   "license": "MIT"
 }
