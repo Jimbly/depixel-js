@@ -18,8 +18,8 @@ Improvements upon original GPU version:
 
 Notes
 * Original GPU code is MIT licensed, the same license may apply here, all original code in this project is additionally released under the MIT License
-* Most GPU code semi-automatically converted to JavaScript by Codex (AI)
-* Example below is expanded to 12x via Depixel and then shrunk by 2x with linear filtering (e.g. 2xAA)
+* Most GPU code semi-automatically converted to JavaScript by Codex and/or Claude (AI)
+* Example below is expanded to 12x via Depixel and then shrunk by 2x with linear filtering (e.g. 4xMSAA)
 
 <img src="https://github.com/Jimbly/depixel-js/blob/HEAD/test/test-in-6x-nearest.png"><img src="https://github.com/Jimbly/depixel-js/blob/HEAD/test/test-out-6x-bilinear.png">
 
