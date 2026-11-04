@@ -72,7 +72,7 @@ const DIAGONAL_NODE_SHIFT = 0.25;
 // Same, but for a node belonging to a pixel with no similar neighbors (see getDiagonalShifts)
 const ISOLATED_NODE_SHIFT = 0.0;
 // Isolated pixels are only expanded if at least this many of their 8 neighbors are connected
-const ISOLATED_MIN_NEIGHBOR_GROUP = 5;
+const ISOLATED_MIN_NEIGHBOR_GROUP = 6;
 // Default standard deviation (in source pixels) of the Gaussian used to blend colors of similar
 // pixels.  The original GPU version used exp(-2.5 * dist^2), (sigma ~0.45), which is so narrow that
 // gradients between similar colors still show the blocky shape of the source pixels; a wider kernel
