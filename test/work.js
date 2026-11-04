@@ -8,10 +8,11 @@ const PNG_RGBA = 6;
 const FILENAME = 'work';
 const MAKE_SIMILARITY = false;
 const USE_SIMILARITY = true;
+const MSAA = 1; // Use 4 for final version
 const OPTS = {
   threshold: 120, // only used for MAKE_SIMILARITY or if USE_SIMILARITY is not set
   borderPx: 2,
-  scale: 6.4,
+  scale: 6.4 * MSAA,
   doOpt: true,
   blendSigma: 0.7,
 };
@@ -140,6 +141,24 @@ let res = scaleImage({
 let dst = new PNG({ width: round(src.width * scale), height: round(src.height * scale), colorType: PNG_RGBA });
 assert.equal(res.data.length, dst.data.length);
 res.data.copy(dst.data);
+if (MSAA > 1) {
+  let src = dst;
+  dst = new PNG({ width: floor(src.width/MSAA), height: floor(src.height/MSAA), colorType: PNG_RGBA });
+  for (let yy = 0; yy < dst.height; ++yy) {
+    for (let xx = 0; xx < dst.width; ++xx) {
+      for (let kk = 0; kk < 4; ++kk) {
+        let v = 0;
+        for (let ii = 0; ii < MSAA; ++ii) {
+          for (let jj = 0; jj < MSAA; ++jj) {
+            v += src.data[(xx * MSAA + ii + (yy * MSAA + jj) * src.width) * 4 + kk];
+          }
+        }
+        dst.data[(xx + yy * dst.width) * 4 + kk] = Math.round(v / (MSAA * MSAA));
+      }
+    }
+  }
+
+}
 fs.writeFileSync(out_name, PNG.sync.write(dst));
 
 console.log('Done.');
